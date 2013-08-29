@@ -39,6 +39,8 @@
 #include "Utilities.h"
 #include <fstream>
 #include <sstream>
+#include <iterator>
+#include <algorithm>
 #include <sys/stat.h>
 #include <assert.h>
 #ifdef GTO_SUPPORT_ZIP
