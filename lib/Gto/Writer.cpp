@@ -55,7 +55,7 @@
 #include <zlib.h>
 #endif
 
-#ifdef WIN32
+#ifdef _WIN32
 #define snprintf _snprintf
 #include <io.h>
 #include <sys/types.h>
@@ -189,11 +189,11 @@ Writer::close()
 #ifdef GTO_SUPPORT_ZIP
     else if ((m_gzRawFd > 0) && m_needsClosing)
     {
-        #ifdef WIN32
+#ifdef _WIN32
         ::_close(m_gzRawFd);
-        #else
+#else
         ::close(m_gzRawFd);
-        #endif
+#endif
     }
 
     m_gzfile = 0;
