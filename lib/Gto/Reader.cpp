@@ -192,6 +192,7 @@ Reader::open(const char *filename)
     
     if ( !(*m_in) )
     {
+        delete m_in;
         m_in = 0;
         fail( "stream failed to open" );
         return false;
@@ -231,7 +232,7 @@ Reader::close()
     m_inRAM = 0;
     m_inRAMSize = 0;
 
-    if (m_needsClosing) 
+    if (m_in) 
     {
         delete m_in;
         m_in = 0;
@@ -278,7 +279,7 @@ void Reader::descriptionComplete() {}
 
 Reader::Request 
 Reader::component(const string& name, 
-                  const string& interp, 
+                  const string&, 
                   const ComponentInfo &c) 
 { 
     // make it backwards compatible with version 2
@@ -287,7 +288,7 @@ Reader::component(const string& name,
 
 Reader::Request 
 Reader::property(const string& name, 
-                 const string& interp,
+                 const string&,
                  const PropertyInfo &p) 
 {
     // make it backwards compatible with version 2
@@ -343,7 +344,7 @@ Reader::internString(const std::string& s)
     if (i == m_stringMap.end())
     {
         m_strings.push_back(s);
-        int index = m_strings.size() - 1;
+        int index = int(m_strings.size() - 1);
         m_stringMap[s] = index;
         return index;
     }
@@ -680,12 +681,13 @@ Reader::readProperty(PropertyInfo& prop)
         m_currentReadOffset = tell();
     }
 
-    prop.offset = m_currentReadOffset;
+    prop.offset = (unsigned int) m_currentReadOffset;
     bool readok = false;
 
     if (prop.requested)
     {
-        if ((buffer = (char*)data(prop, bytes)))
+        buffer = (char*) data(prop, bytes);
+        if (buffer)
         {
             if(prop.index < m_dataOffsets.size())
             {
@@ -694,7 +696,7 @@ Reader::readProperty(PropertyInfo& prop)
             else
             {
                 // Do we need to be somewhere else?
-                if(m_currentReadOffset != tell())
+                if(int(m_currentReadOffset) != tell())
                 {
                     // If so, move the actual file pointer there.
                     seekForward(m_currentReadOffset - tell());
@@ -754,7 +756,8 @@ Reader::notEOF()
     }
     else if (m_in) 
     {
-        return (*m_in);
+        //return (*m_in);
+        return (!m_in->eof());
     }
 #ifdef GTO_SUPPORT_ZIP
     else if (m_gzfile)
@@ -867,7 +870,7 @@ void Reader::fail( std::string why )
 const std::string& Reader::stringFromId(unsigned int i)
 {
     static std::string empty( "" );
-    if (i < 0 || i >= m_strings.size())
+    if (i >= m_strings.size())
     {
         std::cerr << "WARNING: Gto::Reader: Malformed gto file: ";
         std::cerr << "invalid string index" << std::endl;
@@ -947,11 +950,11 @@ int Reader::tell()
 {
     if (m_inRAM)
     {
-        return m_inRAMCurrentPos;
+        return int(m_inRAMCurrentPos);
     }
     else if (m_in)
     {
-        return m_in->tellg();
+        return int(m_in->tellg());
     }
 #ifdef GTO_SUPPORT_ZIP
     else
@@ -1181,7 +1184,7 @@ void Reader::endProperty()
     //
 
     PropertyInfo& info = m_properties.back();
-    info.size = numElementsInBuffer();
+    info.size = Gto::uint32(numElementsInBuffer());
 
     if (info.requested)
     {
@@ -1197,12 +1200,13 @@ void Reader::endProperty()
 
 void Reader::endFile()
 {
-    m_header.numStrings = m_strings.size();
+    m_header.numStrings = Gto::uint32(m_strings.size());
 }
 
 
 void Reader::readIndexTable()
 {
+#ifdef GTO_SUPPORT_ZIP
     // See zhacks.h for details
 
     m_dataOffsets.clear();
@@ -1261,8 +1265,7 @@ void Reader::readIndexTable()
     m_dataOffsets.resize(indexTableSize);
     unsigned int restore_gz_pos = gztell(m_gzfile);
     gzseek_raw(m_gzfile, indexTableOffset);
-    int r = gzread(m_gzfile, &m_dataOffsets.front(), 
-                   indexTableSize * sizeof(unsigned int));
+    /*int r =*/ gzread(m_gzfile, &m_dataOffsets.front(), indexTableSize * sizeof(unsigned int));
 
     //
     // Offsets are always stored as little-endian
@@ -1282,6 +1285,7 @@ void Reader::readIndexTable()
     gzclose(m_gzfile);
     m_gzfile = gzopen(m_inName.c_str(), "rb");
     gzseek(m_gzfile, restore_gz_pos, SEEK_SET);
+#endif
 }
 
 } // Gto

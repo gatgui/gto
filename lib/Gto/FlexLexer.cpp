@@ -562,7 +562,8 @@ static yyconst flex_int16_t yy_chk[318] =
 using namespace std;
 using namespace Gto;
 
-extern int	GTOdebug;
+//extern int	GTOdebug;
+extern int  yydebug;
 #define LVAL reinterpret_cast<YYSTYPE*>(_yystype)
 #define YY_NO_UNISTD_H
 
@@ -977,8 +978,10 @@ case 36:
 YY_RULE_SETUP
 #line 166 "Lexer.l"
 {
-			    GTOdebug=!GTOdebug;
-                            if (GTOdebug) debug();
+			    //GTOdebug=!GTOdebug;
+          yydebug=!yydebug;
+          //                  if (GTOdebug) debug();
+                            if (yydebug) debug();
 			    reader->m_charnum += yyleng;
 			}
 	YY_BREAK

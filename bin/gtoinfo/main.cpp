@@ -40,7 +40,9 @@
 #include <vector>
 #include <string>
 #include <set>
+#ifndef _WIN32
 #include <fnmatch.h>
+#endif
 #include <string.h>
 #include <stdlib.h>
 
@@ -393,7 +395,7 @@ void Reader::data(const PropertyInfo& info, const float* data, size_t numItems)
         if (info.width > 1 )
         {
             cout << " [";
-            for( int j = 0; j < info.width; ++j )
+            for( unsigned int j = 0; j < info.width; ++j )
             {
                 cout << " " << data[(i*info.width)+j];
             }
@@ -436,7 +438,7 @@ void Reader::data(const PropertyInfo& info, const double* data, size_t numItems)
         if (info.width > 1 )
         {
             cout << " [";
-            for( int j = 0; j < info.width; ++j )
+            for( unsigned int j = 0; j < info.width; ++j )
             {
                 cout << " " << data[(i*info.width)+j];
             }
@@ -482,7 +484,7 @@ void Reader::data(const PropertyInfo& info, const int* data, size_t numItems)
             if (info.width > 1)
             {
                 cout << " [";
-                for( int j = 0; j < info.width; ++j )
+                for( unsigned int j = 0; j < info.width; ++j )
                 {
                     cout << " " << data[(i*info.width)+j];
                 }
@@ -521,7 +523,7 @@ void Reader::data(const PropertyInfo& info, const int* data, size_t numItems)
             if( info.width > 1 )
             {
                 cout << " [";
-                for( int j = 0; j < info.width; ++j )
+                for( unsigned int j = 0; j < info.width; ++j )
                 {
                     if (numericStrings)
                     {
@@ -587,7 +589,7 @@ void Reader::data(const PropertyInfo& info,
             if( info.width > 1 )
             {
                 cout << " [";
-                for( int j = 0; j < info.width; ++j )
+                for( unsigned int j = 0; j < info.width; ++j )
                 {
                     cout << " " << data[(i*info.width)+j];
                 }
@@ -637,7 +639,7 @@ void Reader::data(const PropertyInfo& info,
             if( info.width > 1 )
             {
                 cout << " [";
-                for( int j = 0; j < info.width; ++j )
+                for( unsigned int j = 0; j < info.width; ++j )
                 {
                     cout << " " << int(data[(i*info.width)+j]);
                 }
@@ -662,6 +664,7 @@ void Reader::data(const PropertyInfo& info, bool)
 
 //----------------------------------------------------------------------
 
+#ifndef _WIN32
 void filterData(const std::string& filterExpr, Reader& reader)
 {
     Gto::Reader::Properties& properties = reader.properties();
@@ -697,6 +700,7 @@ void filterData(const std::string& filterExpr, Reader& reader)
         }
     }
 }
+#endif
 
 //----------------------------------------------------------------------
 
@@ -711,7 +715,7 @@ void usage()
          << "-s/--strings                   output strings table\n"
          << "-n/--numeric-strings           output string properties as string numbers\n"
          << "-i/--interpretation-strings    output interpretation strings\n"
-         << "-f/--filter expr               filter shell-like expression\n"
+         << "-f/--filter expr               filter shell-like expression (not available on windows)\n"
          << "-r/--readall                   force data read\n"
          << "--help                         usage\n"
          << endl;
@@ -723,7 +727,9 @@ void usage()
 int main(int argc, char *argv[])
 {
     const char *inFile = 0;
+#ifndef _WIN32
     string filterExpr;
+#endif
 
     for (int i=1; i < argc; i++)
     {
@@ -777,6 +783,7 @@ int main(int argc, char *argv[])
             {
                 outputInterp = true;
             }
+#ifndef _WIN32
             else if (!strcmp(arg, "-f") ||
                      !strcmp(arg, "--filter-expression"))
             {
@@ -784,6 +791,7 @@ int main(int argc, char *argv[])
                 filterExpr = argv[i];
                 filtered = true;
             }
+#endif
             else
             {
                 usage();
@@ -805,7 +813,9 @@ int main(int argc, char *argv[])
     unsigned int mode = 0;
     if (!outputData && !readAll) mode |= Gto::Reader::HeaderOnly;
 
+#ifndef _WIN32
     if (filterExpr != "") mode = Gto::Reader::RandomAccess;
+#endif
 
     Reader reader(mode);
 
@@ -814,10 +824,12 @@ int main(int argc, char *argv[])
         cerr << "Error reading file " << inFile << endl;
     }
 
+#ifndef _WIN32
     if (filterExpr != "")
     {
         filterData(filterExpr, reader);
     }
+#endif
 
     return 0;
 }

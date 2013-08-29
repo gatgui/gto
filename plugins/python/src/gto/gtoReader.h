@@ -75,7 +75,9 @@ class Reader : public Gto::Reader
 {
 public:
     Reader( PyObject *callingInstance, unsigned int mode = None );
-
+    
+    virtual ~Reader();
+    
     virtual Request object( const std::string &name,
                             const std::string &protocol,
                             unsigned int protocolVersion,
@@ -125,6 +127,7 @@ typedef struct
 } gtoReader_PyObject;
 
 void gtoReader_PyObject_dealloc( PyObject *self );
+
 static PyTypeObject gtoReader_PyObjectType =
 {
     PyObject_HEAD_INIT( &PyType_Type )
@@ -159,40 +162,22 @@ PyObject *gtoReader_properties( PyObject *_self, PyObject *args );
 // Table of methods available in the gto.Reader base class
 static PyMethodDef gtoReaderMethods[] = 
 {
-    {"__init__", gtoReader_init, METH_VARARGS, 
-                "class constructor"},
-    {"open", gtoReader_open, METH_VARARGS,
-                "open( string filename )"},
-    {"fail", gtoReader_fail, METH_VARARGS,
-                "fail( string why )"},
-    {"why", gtoReader_why, METH_VARARGS,
-                "why()"},
-    {"close", gtoReader_close, METH_VARARGS,
-                "close()"},
-    {"object", gtoReader_object, METH_VARARGS,
-                "object( string name, string protocol, unsigned int "
-                "protocolVersion, ObjectInfo header )"},
-    {"component", gtoReader_component, METH_VARARGS,
-                "component( string name, ComponentInfo header )"},
-    {"property", gtoReader_property, METH_VARARGS,
-                "property( string name, PropertyInfo header )"},
-    {"dataRead", gtoReader_dataRead, METH_VARARGS,
-                "dataRead( PropertyInfo pinfo )"},
-    {"stringFromId", gtoReader_stringFromId, METH_VARARGS,
-                "stringFromId( int i )"},
-    {"stringTable", gtoReader_stringTable, METH_VARARGS,
-                "stringTable()"},
-    {"isSwapped", gtoReader_isSwapped, METH_VARARGS,
-                "isSwapped()"},
-    {"objects", gtoReader_objects, METH_VARARGS,
-                "objects()"},
-    {"accessObject", gtoReader_accessObject, METH_VARARGS,
-                "accessObject( objectInfo )"},
-    {"components", gtoReader_components, METH_VARARGS,
-                "components()"},
-    {"properties", gtoReader_properties, METH_VARARGS,
-                "properties()"},
-
+    {"__init__", gtoReader_init, METH_VARARGS, "class constructor"},
+    {"open", gtoReader_open, METH_VARARGS, "open( string filename )"},
+    {"fail", gtoReader_fail, METH_VARARGS, "fail( string why )"},
+    {"why", gtoReader_why, METH_VARARGS, "why()"},
+    {"close", gtoReader_close, METH_VARARGS, "close()"},
+    {"object", gtoReader_object, METH_VARARGS, "object( string name, string protocol, unsigned int protocolVersion, ObjectInfo header )"},
+    {"component", gtoReader_component, METH_VARARGS, "component( string name, ComponentInfo header )"},
+    {"property", gtoReader_property, METH_VARARGS, "property( string name, PropertyInfo header )"},
+    {"dataRead", gtoReader_dataRead, METH_VARARGS, "dataRead( PropertyInfo pinfo )"},
+    {"stringFromId", gtoReader_stringFromId, METH_VARARGS, "stringFromId( int i )"},
+    {"stringTable", gtoReader_stringTable, METH_VARARGS, "stringTable()"},
+    {"isSwapped", gtoReader_isSwapped, METH_VARARGS, "isSwapped()"},
+    {"objects", gtoReader_objects, METH_VARARGS, "objects()"},
+    {"accessObject", gtoReader_accessObject, METH_VARARGS, "accessObject( objectInfo )"},
+    {"components", gtoReader_components, METH_VARARGS, "components()"},
+    {"properties", gtoReader_properties, METH_VARARGS, "properties()"},
     {NULL},
 };
 

@@ -10,3 +10,8 @@ config
 config.log
 config.status
 libtool
+.build
+release
+debug
+*.dblite
+zlib-1.2.3

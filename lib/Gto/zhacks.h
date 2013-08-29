@@ -2,6 +2,8 @@
 #ifndef __ZHACKS_H__
 #define __ZHACKS_H__
 
+#ifdef GTO_SUPPORT_ZIP
+
 #include <stdio.h>
 #include <zlib.h>
 
@@ -69,5 +71,7 @@ typedef struct gz_stream {
     z_off_t  gto_start, gto_in, gto_out;
     int      gto_back, gto_last;
 } gz_stream;
+
+#endif
 
 #endif    // End #ifdef __ZHACKS_H__

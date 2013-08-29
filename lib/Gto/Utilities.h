@@ -36,19 +36,22 @@
 
 #ifndef __Gto__Utilities__h__
 #define __Gto__Utilities__h__
+
+#include <Gto/config.h>
+
 #include <sys/types.h>
 #include <Gto/Header.h>
 
 namespace Gto {
 
-struct TypeSpec
+struct GTO_API TypeSpec
 {
     DataType     type;
     unsigned int width;
     unsigned int size;
 };
 
-struct Number
+struct GTO_API Number
 {
     union
     {
@@ -60,17 +63,17 @@ struct Number
 };
 
 
-size_t dataSize(Gto::uint32);
+GTO_API size_t dataSize(Gto::uint32);
 
-const char* typeName(Gto::DataType);
+GTO_API const char* typeName(Gto::DataType);
 
-bool isNumber(Gto::DataType);
-Number asNumber(void*, Gto::DataType);
+GTO_API bool isNumber(Gto::DataType);
+GTO_API Number asNumber(void*, Gto::DataType);
 
-bool isGTOFile(const char*);
+GTO_API bool isGTOFile(const char*);
 
-void swapWords(void *data, size_t size);
-void swapShorts(void *data, size_t size);
+GTO_API void swapWords(void *data, size_t size);
+GTO_API void swapShorts(void *data, size_t size);
 
 
 } // Gto

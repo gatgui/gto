@@ -62,63 +62,65 @@ PyObject *ObjectInfo_repr( PyObject *_self, PyObject *args )
         // Invalid parameters, let Python do a stack trace
         return NULL;
     }
-
+    
+    PyObject *reprStr = NULL;
+    
     PyObject *name = PyObject_GetAttrString( self, "name" );
+    
     if( name == NULL )
     {
-        PyObject *reprStr = 
-                        PyString_FromString( "<INVALID ObjectInfo object>" );
-        Py_INCREF( reprStr );
-        return reprStr;
+        reprStr = PyString_FromString( "<INVALID ObjectInfo object>" );
     }
-    PyObject *reprStr = PyString_FromFormat( "<ObjectInfo: '%s'>", 
-                                             PyString_AsString( name ) );
-    Py_INCREF( reprStr );
+    else
+    {
+      reprStr = PyString_FromFormat( "<ObjectInfo: '%s'>", PyString_AsString( name ) );
+      Py_DECREF( name );
+    }
+    
     return reprStr;
 }
 
 // *****************************************************************************
-PyObject *newObjectInfo( Gto::Reader *reader, 
-                         const Gto::Reader::ObjectInfo &oi )
+PyObject *newObjectInfo( Gto::Reader *reader, const Gto::Reader::ObjectInfo &oi )
 {
-    PyObject *module = PyImport_AddModule( "gto" );
+    PyObject *module = PyImport_AddModule( "_gto" );
     PyObject *moduleDict = PyModule_GetDict( module );
             
     PyObject *classObj = PyDict_GetItemString( moduleDict, "ObjectInfo" );
 
     PyObject *args = Py_BuildValue( "()" ); // Empty tuple
     PyObject *objInfo = PyInstance_New( classObj, args, NULL );
+    Py_DECREF(args);  
     
-    PyObject_SetAttr( objInfo, 
-                      PyString_FromString( "name" ),
-                      PyString_FromString( 
-                            reader->stringFromId( oi.name ).c_str() ) );
-
-    PyObject_SetAttr( objInfo, 
-                      PyString_FromString( "protocolName" ),
-                      PyString_FromString( 
-                            reader->stringFromId( oi.protocolName ).c_str() ) );
-
-    PyObject_SetAttr( objInfo, 
-                      PyString_FromString( "protocolVersion" ),
-                      PyInt_FromLong( oi.protocolVersion ) );
-
-    PyObject_SetAttr( objInfo, 
-                      PyString_FromString( "numComponents" ),
-                      PyInt_FromLong( oi.numComponents ) );
-
-    PyObject_SetAttr( objInfo, 
-                      PyString_FromString( "pad" ),
-                      PyInt_FromLong( oi.pad ) );
-
+    PyObject *val;
+    
+    val = PyString_FromString( reader->stringFromId( oi.name ).c_str() );
+    PyObject_SetAttrString( objInfo, "name", val );
+    Py_DECREF(val);
+    
+    val = PyString_FromString( reader->stringFromId( oi.protocolName ).c_str() );
+    PyObject_SetAttrString( objInfo, "protocolName", val );
+    Py_DECREF(val);
+    
+    val = PyInt_FromLong( oi.protocolVersion );
+    PyObject_SetAttrString( objInfo, "protocolVersion", val );
+    Py_DECREF(val);
+    
+    val = PyInt_FromLong( oi.numComponents );
+    PyObject_SetAttrString( objInfo, "numComponents", val );
+    Py_DECREF(val);
+    
+    val = PyInt_FromLong( oi.pad );
+    PyObject_SetAttrString( objInfo, "pad", val );
+    Py_DECREF(val);
+    
     // Since Gto::Reader::accessObject() __requires__ that the objectInfo
     // reference given to it be from the reader's cache, not just a copy
     // with the same information, we store it here.
-    PyObject_SetAttr( objInfo, 
-                      PyString_FromString( "__objInfoPtr" ),
-                      PyCObject_FromVoidPtr( (void *)&oi, NULL ) );
-
-    Py_INCREF( objInfo );
+    val = PyCObject_FromVoidPtr( (void *)&oi, NULL );
+    PyObject_SetAttrString( objInfo, "__objInfoPtr", val );
+    Py_DECREF(val);
+    
     return objInfo;
 }
 
@@ -146,18 +148,20 @@ PyObject *ComponentInfo_repr( PyObject *_self, PyObject *args )
         // Invalid parameters, let Python do a stack trace
         return NULL;
     }
-
+    
+    PyObject *reprStr = NULL;
     PyObject *name = PyObject_GetAttrString( self, "name" );
+    
     if( name == NULL )
     {
-        PyObject *reprStr = 
-                        PyString_FromString( "<INVALID ComponentInfo object>" );
-        Py_INCREF( reprStr );
-        return reprStr;
+        reprStr = PyString_FromString( "<INVALID ComponentInfo object>" );
     }
-    PyObject *reprStr = PyString_FromFormat( "<ComponentInfo: '%s'>", 
-                                             PyString_AsString( name ) );
-    Py_INCREF( reprStr );
+    else
+    {
+        reprStr = PyString_FromFormat( "<ComponentInfo: '%s'>", PyString_AsString( name ) );
+        Py_DECREF( name );
+    }
+    
     return reprStr;
 }
 
@@ -165,41 +169,41 @@ PyObject *ComponentInfo_repr( PyObject *_self, PyObject *args )
 PyObject *newComponentInfo( Gto::Reader *reader,
                             const Gto::Reader::ComponentInfo &ci )
 {
-    PyObject *module = PyImport_AddModule( "gto" );
+    PyObject *module = PyImport_AddModule( "_gto" );
     PyObject *moduleDict = PyModule_GetDict( module );
             
     PyObject *classObj = PyDict_GetItemString( moduleDict, "ComponentInfo" );
 
     PyObject *args = Py_BuildValue( "()" ); // Empty tuple
     PyObject *compInfo = PyInstance_New( classObj, args, NULL );
+    Py_DECREF(args);  
     
-    PyObject_SetAttr( compInfo, 
-                      PyString_FromString( "name" ),
-                      PyString_FromString( 
-                            reader->stringFromId( ci.name ).c_str() ) );
-
-    PyObject_SetAttr( compInfo, 
-                      PyString_FromString( "numProperties" ),
-                      PyInt_FromLong( ci.numProperties ) );
+    PyObject *val;
     
-    PyObject_SetAttr( compInfo, 
-                      PyString_FromString( "flags" ),
-                      PyInt_FromLong( ci.flags ) );
+    val = PyString_FromString( reader->stringFromId( ci.name ).c_str() );
+    PyObject_SetAttrString( compInfo, "name", val );
+    Py_DECREF(val);
     
-    PyObject_SetAttr( compInfo, 
-                      PyString_FromString( "interpretation" ),
-                      PyString_FromString( 
-                          reader->stringFromId( ci.interpretation ).c_str() ) );
+    val = PyInt_FromLong( ci.numProperties );
+    PyObject_SetAttrString( compInfo, "numProperties", val );
+    Py_DECREF(val);
+    
+    val = PyInt_FromLong( ci.flags );
+    PyObject_SetAttrString( compInfo, "flags", val );
+    Py_DECREF(val);
+    
+    val = PyString_FromString( reader->stringFromId( ci.interpretation ).c_str() );
+    PyObject_SetAttrString( compInfo, "interpretation", val );
+    Py_DECREF(val);
+    
+    val = PyInt_FromLong( ci.pad );
+    PyObject_SetAttrString( compInfo, "pad", val );
+    Py_DECREF(val);
 
-    PyObject_SetAttr( compInfo, 
-                      PyString_FromString( "pad" ),
-                      PyInt_FromLong( ci.pad ) );
-
-    PyObject_SetAttr( compInfo, 
-                      PyString_FromString( "object" ),
-                      newObjectInfo( reader, (*ci.object) ) );
-
-    Py_INCREF( compInfo );
+    val = newObjectInfo( reader, (*ci.object) );
+    PyObject_SetAttrString( compInfo, "object", val );
+    Py_DECREF(val);
+    
     return compInfo;
 }
 
@@ -227,18 +231,20 @@ PyObject *PropertyInfo_repr( PyObject *_self, PyObject *args )
         // Invalid parameters, let Python do a stack trace
         return NULL;
     }
-
+    
+    PyObject *reprStr = NULL;
     PyObject *name = PyObject_GetAttrString( self, "name" );
+    
     if( name == NULL )
     {
-        PyObject *reprStr = 
-                         PyString_FromString( "<INVALID PropertyInfo object>" );
-        Py_INCREF( reprStr );
-        return reprStr;
+        reprStr = PyString_FromString( "<INVALID PropertyInfo object>" );
     }
-    PyObject *reprStr = PyString_FromFormat( "<PropertyInfo: '%s'>", 
-                                             PyString_AsString( name ) );
-    Py_INCREF( reprStr );
+    else
+    {
+        reprStr = PyString_FromFormat( "<PropertyInfo: '%s'>", PyString_AsString( name ) );
+        Py_DECREF(name);
+    }
+    
     return reprStr;
 }
 
@@ -246,45 +252,45 @@ PyObject *PropertyInfo_repr( PyObject *_self, PyObject *args )
 PyObject *newPropertyInfo( Gto::Reader *reader,
                            const Gto::Reader::PropertyInfo &pi )
 {
-    PyObject *module = PyImport_AddModule( "gto" );
+    PyObject *module = PyImport_AddModule( "_gto" );
     PyObject *moduleDict = PyModule_GetDict( module );
-            
+    
     PyObject *classObj = PyDict_GetItemString( moduleDict, "PropertyInfo" );
-
+    
     PyObject *args = Py_BuildValue( "()" ); // Empty tuple
     PyObject *propInfo = PyInstance_New( classObj, args, NULL );
+    Py_DECREF(args);
     
-    PyObject_SetAttr( propInfo, 
-                      PyString_FromString( "name" ),
-                      PyString_FromString( 
-                            reader->stringFromId( pi.name ).c_str() ) );
-
-    PyObject_SetAttr( propInfo, 
-                      PyString_FromString( "size" ),
-                      PyInt_FromLong( pi.size ) );
+    PyObject *val;
     
-    PyObject_SetAttr( propInfo, 
-                      PyString_FromString( "type" ),
-                      PyInt_FromLong( pi.type ) );
+    val = PyString_FromString( reader->stringFromId( pi.name ).c_str() );
+    PyObject_SetAttrString( propInfo, "name", val );
+    Py_DECREF(val);
     
-    PyObject_SetAttr( propInfo, 
-                      PyString_FromString( "width" ),
-                      PyInt_FromLong( pi.width ) );
-
-    PyObject_SetAttr( propInfo, 
-                      PyString_FromString( "interpretation" ),
-                      PyString_FromString( 
-                          reader->stringFromId( pi.interpretation ).c_str() ) );
-
-    PyObject_SetAttr( propInfo, 
-                      PyString_FromString( "pad" ),
-                      PyInt_FromLong( pi.pad ) );
-
-    PyObject_SetAttr( propInfo, 
-                      PyString_FromString( "component" ),
-                      newComponentInfo( reader, (*pi.component) ) );
-
-    Py_INCREF( propInfo );
+    val = PyInt_FromLong( pi.size );
+    PyObject_SetAttrString( propInfo, "size", val );
+    Py_DECREF(val);
+    
+    val = PyInt_FromLong( pi.type );
+    PyObject_SetAttrString( propInfo, "type", val );
+    Py_DECREF(val);
+    
+    val = PyInt_FromLong( pi.width );
+    PyObject_SetAttrString( propInfo, "width", val );
+    Py_DECREF(val);
+    
+    val = PyString_FromString( reader->stringFromId( pi.interpretation ).c_str() );
+    PyObject_SetAttrString( propInfo, "interpretation", val );
+    Py_DECREF(val);
+    
+    val = PyInt_FromLong( pi.pad );
+    PyObject_SetAttrString( propInfo, "pad", val );
+    Py_DECREF(val);
+    
+    val = newComponentInfo( reader, (*pi.component) );
+    PyObject_SetAttrString( propInfo, "component", val );
+    Py_DECREF(val);
+    
     return propInfo;
 }
 

@@ -36,6 +36,9 @@
 
 #ifndef __Gto__Writer__h__
 #define __Gto__Writer__h__
+
+#include <Gto/config.h>
+
 #include <Gto/Header.h>
 #include <Gto/Utilities.h>
 #include <assert.h>
@@ -54,10 +57,10 @@ namespace Gto {
 //  functions. This class is not intended to be inherited from.
 //
 
-class Writer
+class GTO_API Writer
 {
 public:
-    struct PropertyPath
+    struct GTO_API PropertyPath
     {
         PropertyPath(size_t a=size_t(-1), size_t b=size_t(-1)) 
             : objectIndex(a), componentIndex(b) {}
@@ -89,7 +92,7 @@ public:
     //
 
     bool            open(const char* filename,
-                         FileType mode = CompressedGTO,
+                         FileType mode = BinaryGTO,
                          bool writeIndex=true);
     
     //

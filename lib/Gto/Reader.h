@@ -35,6 +35,9 @@
 //
 #ifndef __Gto__Reader__h__
 #define __Gto__Reader__h__
+
+#include <Gto/config.h>
+
 #include <Gto/Header.h>
 #include <Gto/Utilities.h>
 #include <iostream>
@@ -61,7 +64,7 @@ namespace Gto {
 //  with GTO_SUPPORT_ZIP defined, it can read gzipped gto files directly.
 //
 
-class Reader
+class GTO_API Reader
 {
 public:
     //
@@ -73,7 +76,7 @@ public:
     struct PropertyInfo;
     friend class ::GTOFlexLexer;   // for ascii parser
 
-    struct ObjectInfo : ObjectHeader
+    struct GTO_API ObjectInfo : ObjectHeader
     {
         void*               objectData; // whatever was returned from object()
 
@@ -85,7 +88,7 @@ public:
         friend class Reader;
     };
 
-    struct ComponentInfo : ComponentHeader
+    struct GTO_API ComponentInfo : ComponentHeader
     {
         void*               componentData; // return value of component()
         const ObjectInfo*   object;
@@ -98,7 +101,7 @@ public:
         friend class Reader;
     };
 
-    struct PropertyInfo : PropertyHeader
+    struct GTO_API PropertyInfo : PropertyHeader
     {
         void*                propertyData;
         unsigned int         offset;    // file offset
@@ -241,7 +244,7 @@ public:
     //  is non-zero.
     //
 
-    struct Request
+    struct GTO_API Request
     {
         Request()
             : m_want(true), m_data(0) {}

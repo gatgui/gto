@@ -58,17 +58,21 @@ PyObject *gtoError()
 
 // *****************************************************************************
 // Returns the Python type name of an object as a string
-const char *PyTypeName( PyObject *object )
+std::string PyTypeName( PyObject *object )
 {
     // Figure out the class name (as a string)
-    PyObject *itemClass = PyObject_GetAttr( object,
-                                PyString_FromString( "__class__" ) );
+    PyObject *itemClass = PyObject_GetAttrString( object, "__class__" );
     assert( itemClass != NULL );
-    PyObject *itemClassName = PyObject_GetAttr( itemClass,
-                            PyString_FromString( "__name__" ) );
+    
+    PyObject *itemClassName = PyObject_GetAttrString( itemClass, "__name__" );
     assert( itemClassName != NULL );
-
-    return PyString_AsString( itemClassName );
+    
+    std::string rv = PyString_AsString( itemClassName );
+    
+    Py_DECREF(itemClass);
+    Py_DECREF(itemClassName);
+    
+    return rv;
 }
 
 } // End namespace PyGto
@@ -96,18 +100,19 @@ static PyObject *defineClass( PyObject *moduleDict,
 
     if( docString )
     {
-        PyDict_SetItemString( classDict, "__doc__", 
-                 PyString_FromString( docString ) );
+        PyObject *doc = PyString_FromString( docString );
+        PyDict_SetItemString( classDict, "__doc__", doc );
+        Py_DECREF(doc);
     }
 
     // Add methods to the class
-    for( PyMethodDef *def = classMethods;
-         def->ml_name != NULL; 
-         def++ )
+    for( PyMethodDef *def = classMethods; def->ml_name != NULL;  def++ )
     {
         PyObject *func = PyCFunction_New( def, NULL );
         PyObject *method = PyMethod_New( func, NULL, classDef );
+        
         PyDict_SetItemString( classDict, def->ml_name, method );
+        
         Py_DECREF( func );
         Py_DECREF( method );
     }
@@ -119,6 +124,7 @@ static PyObject *defineClass( PyObject *moduleDict,
     assert( classDef != NULL );
     
     PyDict_SetItemString( moduleDict, classNameStr, classDef );
+    
     Py_DECREF( classDict );
     Py_DECREF( className );
     
@@ -128,99 +134,141 @@ static PyObject *defineClass( PyObject *moduleDict,
 // *****************************************************************************
 static void defineConstants( PyObject *moduleDict )
 {
-    PyDict_SetItemString( moduleDict, "__doc__", 
-        PyString_FromString( "gto I/O module  v3.01\n"
-                             "(c) 2003 Tweak Films\n"
-                             "Compiled on "
-                             __DATE__ " at " __TIME__ ) );
-
-    PyDict_SetItemString( moduleDict, "TRANSPOSED", 
-        PyInt_FromLong( Gto::Transposed ) );
-
-    PyDict_SetItemString( moduleDict, "MATRIX", 
-        PyInt_FromLong( Gto::Matrix ) );
-
-    PyDict_SetItemString( moduleDict, "INT", 
-        PyInt_FromLong( Gto::Int ) );
-
-    PyDict_SetItemString( moduleDict, "FLOAT", 
-        PyInt_FromLong( Gto::Float ) );
-
-    PyDict_SetItemString( moduleDict, "DOUBLE", 
-        PyInt_FromLong( Gto::Double ) );
-
-    PyDict_SetItemString( moduleDict, "HALF", 
-        PyInt_FromLong( Gto::Half ) );
-
-    PyDict_SetItemString( moduleDict, "STRING", 
-        PyInt_FromLong( Gto::String ) );
-
-    PyDict_SetItemString( moduleDict, "BOOLEAN", 
-        PyInt_FromLong( Gto::Boolean ) );
-
-    PyDict_SetItemString( moduleDict, "SHORT", 
-        PyInt_FromLong( Gto::Short ) );
-
-    PyDict_SetItemString( moduleDict, "BYTE", 
-        PyInt_FromLong( Gto::Byte ) );
-
-    PyDict_SetItemString( moduleDict, "GTO_VERSION",
-        PyInt_FromLong( GTO_VERSION ) );
+    PyObject *cst = 0;
+    
+    cst = PyString_FromString( "gto I/O module  v3.5.4\n"
+                               "(c) 2003 Tweak Films\n"
+                               "Compiled on "
+                               __DATE__ " at " __TIME__ );
+    PyDict_SetItemString( moduleDict, "__doc__", cst );
+    Py_DECREF(cst);
+    
+    cst = PyInt_FromLong( Gto::Transposed );
+    PyDict_SetItemString( moduleDict, "Transposed", cst );
+    Py_DECREF(cst);
+    
+    cst = PyInt_FromLong( Gto::Matrix );
+    PyDict_SetItemString( moduleDict, "Matrix", cst );
+    Py_DECREF(cst);
+    
+    cst = PyInt_FromLong( Gto::Int );
+    PyDict_SetItemString( moduleDict, "Int", cst );
+    Py_DECREF(cst);
+    
+    cst = PyInt_FromLong( Gto::Float );
+    PyDict_SetItemString( moduleDict, "Float", cst );
+    Py_DECREF(cst);
+    
+    cst = PyInt_FromLong( Gto::Double );
+    PyDict_SetItemString( moduleDict, "Double", cst );
+    Py_DECREF(cst);
+    
+    cst = PyInt_FromLong( Gto::Half );
+    PyDict_SetItemString( moduleDict, "Half", cst );
+    Py_DECREF(cst);
+    
+    cst = PyInt_FromLong( Gto::String );
+    PyDict_SetItemString( moduleDict, "Strong", cst );
+    Py_DECREF(cst);
+    
+    cst = PyInt_FromLong( Gto::Boolean );
+    PyDict_SetItemString( moduleDict, "Boolean", cst );
+    Py_DECREF(cst);
+    
+    cst = PyInt_FromLong( Gto::Short );
+    PyDict_SetItemString( moduleDict, "Short", cst );
+    Py_DECREF(cst);
+    
+    cst = PyInt_FromLong( Gto::Byte );
+    PyDict_SetItemString( moduleDict, "Byte", cst );
+    Py_DECREF(cst);
+    
+    cst = PyInt_FromLong( GTO_VERSION );
+    PyDict_SetItemString( moduleDict, "GTO_VERSION", cst );
+    Py_DECREF(cst);
 }
 
 // *****************************************************************************
 // This function is called by Python when the module is imported
-extern "C" void initgto()
-{
-    // Create a new gto module object
-    PyObject *module = Py_InitModule( "gto", ModuleMethods );
-    PyObject *moduleDict = PyModule_GetDict( module );
-    
-    // Create the exception and add it to the module
-    PyGto::g_gtoError = PyErr_NewException( "gto.Error", NULL, NULL );
-    PyDict_SetItemString( moduleDict, "Error", PyGto::g_gtoError );
+extern "C" {
 
-    // Add 'constants' to the module
-    defineConstants( moduleDict );
+#ifdef _WIN32
+  __declspec(dllexport)
+#else
+  __attribute__ ((visibility ("default")))
+#endif
+  void init_gto(void)
+  {
+      // Create a new gto module object
+      PyObject *module = Py_InitModule( "_gto", ModuleMethods );
+      PyObject *moduleDict = PyModule_GetDict( module );
+      
+      // Create the exception and add it to the module
+      PyGto::g_gtoError = PyErr_NewException( "_gto.Error", NULL, NULL );
+      PyDict_SetItemString( moduleDict, "Error", PyGto::g_gtoError );
 
-    // Create info classes
-    defineClass( moduleDict, "ObjectInfo", PyGto::ObjectInfoMethods );
-    defineClass( moduleDict, "ComponentInfo", PyGto::ComponentInfoMethods );
-    defineClass( moduleDict, "PropertyInfo", PyGto::PropertyInfoMethods );
+      // Add 'constants' to the module
+      defineConstants( moduleDict );
 
-    // Create the Reader class
-    PyObject *readerClass = defineClass( moduleDict, 
-                                         "Reader", 
-                                         PyGto::gtoReaderMethods,
-                                         PyGto::readerDocString );
-    PyClassObject *readerClassObj = (PyClassObject *)( readerClass );
+      // Create info classes
+      Py_DECREF( defineClass( moduleDict, "ObjectInfo", PyGto::ObjectInfoMethods ) );
+      Py_DECREF( defineClass( moduleDict, "ComponentInfo", PyGto::ComponentInfoMethods ) );
+      Py_DECREF( defineClass( moduleDict, "PropertyInfo", PyGto::PropertyInfoMethods ) );
+      
+      PyObject *classCst;
+      
+      // Create the Reader class
+      PyObject *readerClass = defineClass( moduleDict, 
+                                           "Reader", 
+                                           PyGto::gtoReaderMethods,
+                                           PyGto::readerDocString );
+      
+      PyClassObject *readerClassObj = (PyClassObject *)( readerClass );
 
-    // Add a couple of Reader-specific constants
-    PyDict_SetItemString( readerClassObj->cl_dict, "NONE", 
-                          PyInt_FromLong( Gto::Reader::None ) );
-    PyDict_SetItemString( readerClassObj->cl_dict, "HEADERONLY", 
-                          PyInt_FromLong( Gto::Reader::HeaderOnly ) );
-    PyDict_SetItemString( readerClassObj->cl_dict, "RANDOMACCESS", 
-                          PyInt_FromLong( Gto::Reader::RandomAccess ) );
-    PyDict_SetItemString( readerClassObj->cl_dict, "BINARYONLY", 
-                          PyInt_FromLong( Gto::Reader::BinaryOnly ) );
-    PyDict_SetItemString( readerClassObj->cl_dict, "TEXTONLY", 
-                          PyInt_FromLong( Gto::Reader::TextOnly ) );
+      // Add a couple of Reader-specific constants
+      classCst = PyInt_FromLong( Gto::Reader::None );
+      PyDict_SetItemString( readerClassObj->cl_dict, "None", classCst );
+      Py_DECREF(classCst);
+      
+      classCst = PyInt_FromLong( Gto::Reader::HeaderOnly );
+      PyDict_SetItemString( readerClassObj->cl_dict, "HeaderOnly", classCst );
+      Py_DECREF(classCst);
+      
+      classCst = PyInt_FromLong( Gto::Reader::RandomAccess );
+      PyDict_SetItemString( readerClassObj->cl_dict, "RandomAccess", classCst );
+      Py_DECREF(classCst);
+      
+      classCst = PyInt_FromLong( Gto::Reader::BinaryOnly );
+      PyDict_SetItemString( readerClassObj->cl_dict, "BinaryOnly", classCst );
+      Py_DECREF(classCst);
+      
+      classCst = PyInt_FromLong( Gto::Reader::TextOnly );
+      PyDict_SetItemString( readerClassObj->cl_dict, "TextOnly", classCst );
+      Py_DECREF(classCst);
+      
+      Py_DECREF(readerClass);
 
+      // Create the Writer class
+      PyObject *writerClass = defineClass( moduleDict, 
+                                           "Writer", 
+                                           PyGto::gtoWriterMethods,
+                                           PyGto::writerDocString );
+      
+      PyClassObject *writerClassObj = (PyClassObject *)( writerClass );
 
-    // Create the Writer class
-    PyObject *writerClass = defineClass( moduleDict, 
-                                         "Writer", 
-                                         PyGto::gtoWriterMethods,
-                                         PyGto::writerDocString );
-    PyClassObject *writerClassObj = (PyClassObject *)( writerClass );
-
-    // Add a couple of Writer-specific constants
-    PyDict_SetItemString( writerClassObj->cl_dict, "BINARYGTO", 
-                          PyInt_FromLong( Gto::Writer::BinaryGTO ) );
-    PyDict_SetItemString( writerClassObj->cl_dict, "COMPRESSEDGTO", 
-                          PyInt_FromLong( Gto::Writer::CompressedGTO ) );
-    PyDict_SetItemString( writerClassObj->cl_dict, "TEXTGTO", 
-                          PyInt_FromLong( Gto::Writer::TextGTO ) );
-
+      // Add a couple of Writer-specific constants
+      classCst = PyInt_FromLong( Gto::Writer::BinaryGTO );
+      PyDict_SetItemString( writerClassObj->cl_dict, "BinaryGTO", classCst );
+      Py_DECREF(classCst);
+      
+      classCst = PyInt_FromLong( Gto::Writer::CompressedGTO );
+      PyDict_SetItemString( writerClassObj->cl_dict, "CompressedGTO", classCst );
+      Py_DECREF(classCst);
+      
+      classCst = PyInt_FromLong( Gto::Writer::TextGTO );
+      PyDict_SetItemString( writerClassObj->cl_dict, "TextGTO", classCst );
+      Py_DECREF(classCst);
+      
+      Py_DECREF(writerClass);
+  }
 }

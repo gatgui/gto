@@ -35,6 +35,8 @@
 //  USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 //  DAMAGE.
 //
+#include <Gto/config.h>
+
 #include <Gto/Header.h>
 #include <Gto/Reader.h>
 #include <Gto/Writer.h>
@@ -53,7 +55,7 @@ namespace Gto {
 
 //----------------------------------------------------------------------
 
-struct Property
+struct GTO_API Property
 {
     Property(const std::string& n,
              const std::string& i,
@@ -94,7 +96,7 @@ typedef std::vector<Property*> Properties;
 
 //----------------------------------------------------------------------
 
-struct Component
+struct GTO_API Component
 {
     Component(const std::string& n, 
               const std::string& i, 
@@ -113,7 +115,7 @@ typedef std::vector<Component*> Components;
 
 //----------------------------------------------------------------------
 
-struct Object
+struct GTO_API Object
 {
     Object(const std::string& n, const std::string& p, unsigned int v)
         : name(n), protocol(p), protocolVersion(v) {}
@@ -131,7 +133,7 @@ typedef std::vector<Object*> Objects;
 
 typedef std::vector<std::string> Strings;
 
-struct RawDataBase
+struct GTO_API RawDataBase
 {
     ~RawDataBase();
 
@@ -154,7 +156,7 @@ struct RawDataBase
 //  function. The RawDataBaseReader will not delete it.
 //
 
-class RawDataBaseReader : public Reader
+class GTO_API RawDataBaseReader : public Reader
 {
 public:
     explicit RawDataBaseReader(unsigned int mode = None);
@@ -195,7 +197,7 @@ protected:
 //  The uses a Writer class (instead of being one).
 //
 
-class RawDataBaseWriter
+class GTO_API RawDataBaseWriter
 {
 public:
     RawDataBaseWriter() : m_writer() {}

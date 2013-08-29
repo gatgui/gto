@@ -80,6 +80,8 @@
 // Never included before - need to define base class.
 #define __FLEX_LEXER_H
 
+#include <Gto/config.h>
+
 #include <iostream>
 #  ifndef FLEX_STD
 #    define FLEX_STD std::
@@ -91,6 +93,7 @@ extern "C++" {
 #include <iostream>
 #include <math.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string>
 #include <string.h>
 #include <vector>
@@ -99,7 +102,7 @@ extern "C++" {
 struct yy_buffer_state;
 typedef int yy_state_type;
 
-class FlexLexer {
+class GTO_API FlexLexer {
 public:
 	virtual ~FlexLexer()	{ }
 
@@ -150,7 +153,7 @@ protected:
 
 extern "C++" {
 
-class GTOFlexLexer : public FlexLexer 
+class GTO_API GTOFlexLexer : public FlexLexer 
 {
 public:
     // arg_yyin and arg_yyout default to the cin and cout, but we

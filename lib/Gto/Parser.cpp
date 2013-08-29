@@ -64,6 +64,7 @@
 #define YYLSP_NEEDED 0
 
 /* Substitute the variable and function names.  */
+/*
 #define yyparse         GTOparse
 #define yylex           GTOlex
 #define yyerror         GTOerror
@@ -71,7 +72,7 @@
 #define yychar          GTOchar
 #define yydebug         GTOdebug
 #define yynerrs         GTOnerrs
-
+*/
 
 /* Copy the first part of user declarations.  */
 

@@ -36,6 +36,8 @@
 #ifndef __Gto__Header__h__
 #define __Gto__Header__h__
 
+#include <Gto/config.h>
+
 #ifdef __APPLE__
 #ifndef PLATFORM_DARWIN
 #define PLATFORM_DARWIN
@@ -65,7 +67,7 @@ typedef double              float64;
 //  File Header
 //
 
-struct Header
+struct GTO_API Header
 {
     static const unsigned int MagicText = GTO_MAGIC_TEXT;
     static const unsigned int CigamText = GTO_MAGIC_TEXTl;
@@ -83,7 +85,7 @@ struct Header
 //  Object Header
 //
 
-struct ObjectHeader
+struct GTO_API ObjectHeader
 {
     uint32        name;             // string
     uint32        protocolName;     // string
@@ -92,7 +94,7 @@ struct ObjectHeader
     uint32        pad;
 };
 
-struct ObjectHeader_v2
+struct GTO_API ObjectHeader_v2
 {
     uint32        name;             // string
     uint32        protocolName;     // string
@@ -110,7 +112,7 @@ enum ComponentFlags
     Matrix      = 1 << 1,
 };
 
-struct ComponentHeader
+struct GTO_API ComponentHeader
 {
     uint32        name;             // string
     uint32        numProperties;
@@ -119,7 +121,7 @@ struct ComponentHeader
     uint32        pad;
 };
 
-struct ComponentHeader_v2
+struct GTO_API ComponentHeader_v2
 {
     uint32        name;             // string
     uint32        numProperties;
@@ -146,7 +148,7 @@ enum DataType
 };
 
 
-struct PropertyHeader
+struct GTO_API PropertyHeader
 {
     uint32        name;             // string
     uint32        size;
@@ -156,7 +158,7 @@ struct PropertyHeader
     uint32        pad;
 };
 
-struct PropertyHeader_v2
+struct GTO_API PropertyHeader_v2
 {
     uint32        name;
     uint32        size;

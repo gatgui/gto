@@ -82,7 +82,7 @@ Properties to a gtoContainer:
     myGtoFile.myobj = Object( "myobj", "objprotocol", 1 )
     myGtoFile.myobj.append( Component( "mycomponent", "compinterp" ) )
     
-    prop = Property( "myprop", gto.STRING, size = 2, width = 1,
+    prop = Property( "myprop", gto.String, size = 2, width = 1,
                      data = ["Hello","world"] )
     myGtoFile.myobj.mycomponent.append( prop )
 
@@ -815,7 +815,7 @@ class gtoContainer( gto.Reader ):
             # the process will be transparent to the user.  The 
             # data for an object will be read automatically when
             # the DATA for any property in that object is requested.
-            gto.Reader.__init__(self, gto.Reader.RANDOMACCESS)
+            gto.Reader.__init__(self, gto.Reader.RandomAccess)
             self.open( self.__filename )
 
             for oi in gto.Reader.objects(self):
@@ -1094,7 +1094,7 @@ class gtoContainer( gto.Reader ):
                     propSize = prop.size()
                     propWidth = prop.width()
                     propInterp = prop.interp()
-                    if propType == gto.STRING:
+                    if propType == gto.String:
                         writer.intern( prop() )
                     if propInterp:
                         writer.property( propName, propType, propSize, 

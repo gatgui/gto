@@ -70,11 +70,11 @@ Writer::Writer()
     : m_out(0),
       m_gzfile(0),
       m_gzRawFd(-1),
+      m_currentProperty(0),
+      m_type(BinaryGTO),
       m_needsClosing(false),
       m_error(false),
       m_tableFinished(false),
-      m_currentProperty(0),
-      m_type(CompressedGTO),
       m_endDataCalled(false),
       m_beginDataCalled(false),
       m_objectActive(false),
@@ -87,11 +87,11 @@ Writer::Writer(ostream &o)
     : m_out(0),
       m_gzfile(0),
       m_gzRawFd(-1),
+      m_currentProperty(0),
+      m_type(BinaryGTO),
       m_needsClosing(true),
       m_error(false),
       m_tableFinished(false),
-      m_currentProperty(0),
-      m_type(CompressedGTO),
       m_endDataCalled(false),
       m_beginDataCalled(false),
       m_objectActive(false),
@@ -145,11 +145,11 @@ Writer::open(const char* filename, FileType type, bool writeIndex)
 #ifdef GTO_SUPPORT_ZIP
     else if (type == CompressedGTO)
     {
-        #ifdef WIN32
+#ifdef _WIN32
         m_gzRawFd = ::_open( filename, _O_WRONLY|_O_CREAT|_O_TRUNC );
-        #else
+#else
         m_gzRawFd = ::open(filename, O_WRONLY|O_CREAT|O_TRUNC, 0666);
-        #endif
+#endif
 
         if (m_gzRawFd < 0)
         {
@@ -221,15 +221,17 @@ Writer::beginData(const std::string *orderedStrings, int num)
     }
     else
     {
-        if(m_type == CompressedGTO)
+#ifdef GTO_SUPPORT_ZIP
+        if (m_type == CompressedGTO)
         {
-            #ifdef WIN32
+#ifdef _WIN32
             m_gzfile = gzdopen(_dup(m_gzRawFd), "w");
-            #else
+#else
             m_gzfile = gzdopen(dup(m_gzRawFd), "w");
-            #endif
+#endif
             prepIndexTable();
         }
+#endif
         writeHead();
     }
 
@@ -349,8 +351,8 @@ Writer::beginObject(const char* name,
     ObjectHeader header;
     memset(&header, 0, sizeof(ObjectHeader));
     header.numComponents   = 0;
-    header.name            = m_names.size() - 2;
-    header.protocolName    = m_names.size() - 1;
+    header.name            = Gto::uint32(m_names.size() - 2);
+    header.protocolName    = Gto::uint32(m_names.size() - 1);
     header.protocolVersion = version;
 
     m_objects.push_back(header);
@@ -387,12 +389,12 @@ Writer::beginComponent(const char* name,
 
     header.numProperties = 0;
     header.flags         = flags;
-    header.name          = m_names.size() - 1;
+    header.name          = Gto::uint32(m_names.size() - 1);
     header.pad           = 0;
 
     if (!interp) interp = "";
     m_names.push_back(interp);
-    header.interpretation = m_names.size() - 1;
+    header.interpretation = Gto::uint32(m_names.size() - 1);
 
     m_components.push_back(header);
     m_componentActive = true;
@@ -428,15 +430,15 @@ Writer::property(const char* name,
 
     PropertyHeader header;
     memset(&header, 0, sizeof(PropertyHeader));
-    header.size   = numElements;
+    header.size   = Gto::uint32(numElements);
     header.type   = type;
-    header.width  = partsPerElement;
-    header.name   = m_names.size() - 1;
+    header.width  = Gto::uint32(partsPerElement);
+    header.name   = Gto::uint32(m_names.size() - 1);
     header.pad    = 0;
 
     if (!interp) interp = "";
     m_names.push_back(interp);
-    header.interpretation = m_names.size() - 1;
+    header.interpretation = Gto::uint32(m_names.size() - 1);
 
     m_properties.push_back(header);
 
@@ -719,8 +721,8 @@ Writer::writeHead()
 {
     Header header;
     header.magic         = GTO_MAGIC;
-    header.numObjects    = m_objects.size();
-    header.numStrings    = m_strings.size();
+    header.numObjects    = Gto::uint32(m_objects.size());
+    header.numStrings    = Gto::uint32(m_strings.size());
     header.version       = GTO_VERSION;
     header.flags         = 0;
 
@@ -901,11 +903,11 @@ Writer::propertyDataRaw(const void* data,
             if( (m_type == CompressedGTO) && m_writeIndexTable )
             {
                 gzflush(m_gzfile, Z_FULL_FLUSH);
-                #ifdef WIN32
+#ifdef _WIN32
                 m_dataOffsets.push_back( _lseek( m_gzRawFd, 0, SEEK_CUR ));
-                #else
+#else
                 m_dataOffsets.push_back(lseek(m_gzRawFd, 0, SEEK_CUR));
-                #endif
+#endif
             }
 #endif
             write(data, dataSize(m_properties[p].type) * n);
@@ -917,6 +919,7 @@ Writer::propertyDataRaw(const void* data,
 void
 Writer::prepIndexTable()
 {
+#ifdef GTO_SUPPORT_ZIP
     // See zhacks.h for details
 
     if( ! m_writeIndexTable ) return;
@@ -943,12 +946,14 @@ Writer::prepIndexTable()
 
     gzflush(m_gzfile, Z_FULL_FLUSH);
     s->gto_start = ftell(s->gto_z_file);
+#endif
 }
 
 
 void
 Writer::writeIndexTable()
 {
+#ifdef GTO_SUPPORT_ZIP
     // See zhacks.h for details
 
     if( ! m_writeIndexTable ) return;
@@ -958,11 +963,11 @@ Writer::writeIndexTable()
     // Lay down a gzip marker and remember where it is
     //
     gzflush(m_gzfile, Z_FULL_FLUSH);
-    #ifdef WIN32
+#ifdef _WIN32
     unsigned int indexTableOffset = _lseek(m_gzRawFd, 0, SEEK_CUR);
-    #else
+#else
     unsigned int indexTableOffset = lseek(m_gzRawFd, 0, SEEK_CUR);
-    #endif
+#endif
     unsigned int indexTableSize = m_dataOffsets.size();
 
     //
@@ -979,8 +984,7 @@ Writer::writeIndexTable()
     //
     // Write the index table into the gzip stream
     //
-    int w = gzwrite(m_gzfile, &m_dataOffsets.front(),
-                    m_dataOffsets.size() * sizeof(unsigned int));
+    /*int w =*/ gzwrite(m_gzfile, &m_dataOffsets.front(), m_dataOffsets.size() * sizeof(unsigned int));
 
     //
     // Close the gzip file.  Must be done before lseeking back
@@ -993,15 +997,17 @@ Writer::writeIndexTable()
     // Write the raw offset to the index table into the
     // 'extra' gzip header field.
     //
-    #ifdef WIN32
+#ifdef _WIN32
     _lseek(m_gzRawFd, 12L, SEEK_SET);
     ::_write(m_gzRawFd, &indexTableOffset, sizeof(unsigned int));
     ::_write(m_gzRawFd, &indexTableSize, sizeof(unsigned int));
-    #else
+#else
     lseek(m_gzRawFd, 12L, SEEK_SET);
     ::write(m_gzRawFd, &indexTableOffset, sizeof(unsigned int));
     ::write(m_gzRawFd, &indexTableSize, sizeof(unsigned int));
-    #endif
+#endif
+
+#endif
 }
 
 

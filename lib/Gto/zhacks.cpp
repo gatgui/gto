@@ -36,6 +36,8 @@
 
 #include "zhacks.h"
 
+#ifdef GTO_SUPPORT_ZIP
+
 z_off_t gzseek_raw(gzFile file, z_off_t raw_offset)
 {
     gz_stream *s = (gz_stream*)file;
@@ -55,3 +57,5 @@ z_off_t gzseek_raw(gzFile file, z_off_t raw_offset)
     s->gto_out = 0;
     return fseek(s->gto_z_file, s->gto_start, SEEK_SET);
 }
+
+#endif

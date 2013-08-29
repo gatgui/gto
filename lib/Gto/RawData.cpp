@@ -46,8 +46,7 @@ Property::Property(const std::string& n,
                    size_t s,
                    size_t w,
                    bool allocate)
-    : name(n), interp(i), type(t), size(s), width(w), voidData(0),
-      _allocated(allocate)
+    : name(n), interp(i), type(t), size(s), width(w), _allocated(allocate), voidData(0)
 {
     if (allocate)
     {
@@ -67,8 +66,7 @@ Property::Property(const std::string& n,
                    size_t s,
                    size_t w,
                    bool allocate)
-    : name(n), interp(""), type(t), size(s), width(w), voidData(0),
-      _allocated(allocate)
+    : name(n), interp(""), type(t), size(s), width(w), _allocated(allocate), voidData(0)
 {
     if (allocate)
     {
@@ -172,7 +170,7 @@ Reader::Request
 RawDataBaseReader::object(const string& name,
                           const string& protocol,
                           unsigned int protocolVersion,
-                          const ObjectInfo& info)
+                          const ObjectInfo&)
 {
     Object *o = new Object(name, protocol, protocolVersion);
     m_dataBase->objects.push_back(o);
@@ -185,7 +183,7 @@ RawDataBaseReader::component(const string& name,
                              const ComponentInfo& info)
 {
     Object *o    = reinterpret_cast<Object*>(info.object->objectData);
-    Component *c = new Component(name, interp, info.flags);
+    Component *c = new Component(name, interp, Gto::uint16(info.flags));
     o->components.push_back(c);
     return Request(true, c);
 }
@@ -259,7 +257,7 @@ RawDataBaseWriter::writeProperty(bool header, const Property *property)
 
         if (property->type == Gto::String)
         {
-            int numItems = property->size * property->width;
+            int numItems = int(property->size * property->width);
             const string* data = property->stringData;
 
             for (int i=0; i < numItems; i++)

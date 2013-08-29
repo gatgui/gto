@@ -38,6 +38,7 @@
 #define __GTOMODULE_H__
 
 #include <Python.h>
+#include <string>
 
 namespace PyGto {
 
@@ -47,7 +48,7 @@ PyObject *gtoError();
 
 // *****************************************************************************
 // Returns the Python type name of an object as a string
-const char *PyTypeName( PyObject *object );
+std::string PyTypeName( PyObject *object );
 
 }; // End namespace pyGto
 
