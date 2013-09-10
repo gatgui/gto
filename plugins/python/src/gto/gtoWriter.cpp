@@ -217,7 +217,7 @@ PyObject *gtoWriter_open( PyObject *_self, PyObject *args )
 {
     PyInstanceObject *self;
     char *filename;
-    Gto::Writer::FileType filemode = Gto::Writer::CompressedGTO;
+    Gto::Writer::FileType filemode = Gto::Writer::BinaryGTO;
 
     if( ! PyArg_ParseTuple( args, "Os|i:gtoWriter_open", &self, &filename, &filemode ) )
     {
