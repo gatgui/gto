@@ -41,54 +41,28 @@
 
 namespace PyGto {
 
-// *****************************************************************************
-// We start with a few utility functions...
-// *****************************************************************************
-
-// *****************************************************************************
-// Returns the C++ Gto::Reader instance if a file is open, otherwise NULL
-Reader *readerIfOpen( PyInstanceObject *self )
-{
-    assert( self != NULL );
-
-    gtoReader_PyObject *reader = (gtoReader_PyObject *) PyDict_GetItemString( self->in_dict, "__readerEngine" );
-    
-    if( ! reader )
-    {
-        PyErr_SetString( gtoError(), "Fatal internal error: no readerEngine!" );
-        return NULL;
-    }
-    
-    if( ! reader->m_reader )
-    {
-        PyErr_SetString( gtoError(), "Fatal internal error: no Gto::Reader instance!" );
-        return NULL;
-    }
-    
-    if( ! reader->m_isOpen )
-    {
-        PyErr_SetString( gtoError(), "no file is open." );
-        return NULL;
-    }
-    
-    return reader->m_reader;
-}
-
-// *****************************************************************************
-// Properly deallocate the instance-specific stuff-holder object
-void gtoReader_PyObject_dealloc( PyObject *self )
-{
-    assert( self != NULL );
-    
-    gtoReader_PyObject *grSelf = (gtoReader_PyObject *)self;
-    
-    if( grSelf->m_reader )
-    {
-        delete grSelf->m_reader;
-    }
-    
-    PyObject_DEL( self );
-}
+static char ReaderDocString[] = 
+"\n"
+"The basic theory of operation is similar to how the C++ Gto::Reader class\n"
+"works.  In your own code, you would create a class that is derived from\n"
+"the gto.Reader class defined in this module.  You should implement the\n"
+"'object', 'component', 'property', and 'dataRead' methods.\n"
+"\n"
+"There are a couple of major differences from the C++ implementation to\n"
+"be aware of:\n"
+"\n"
+"1. The return value for the object, component, and property methods should\n"
+"   evaluate to True if you want to read that property, or false/None if\n"
+"   you don't.  There is no way to return a pointer/object and have it \n"
+"   passed back to you when the data function is called.  It doesn't really\n"
+"   make sense to do this in Python anyway.\n"
+"\n"
+"2. Only the dataRead method is implemented, as the data method doesn't\n"
+"   make sense in Python.  As each property is read, a python tuple is\n"
+"   automatically created and passed to dataRead.  Note that the prototype \n"
+"   is slightly different here than in the Gto::Reader class:  I added the \n"
+"   'name' argument for convenience sake.\n"
+"\n";
 
 // *****************************************************************************
 // Converts from gto's enum-based types to their string representation
@@ -96,19 +70,26 @@ static const char *typeAsString( int type )
 {
     switch( type )
     {
-    case Gto::Int: return "int";
-    case Gto::Float: return "float";
-    case Gto::Double: return "double";
-    case Gto::Half: return "half";
-    case Gto::String: return "string";
-    case Gto::Boolean: return "bool";
-    case Gto::Short: return "short";
-    case Gto::Byte: return "byte";
+    case Gto::Int:
+        return "int";
+    case Gto::Float:
+        return "float";
+    case Gto::Double:
+        return "double";
+    case Gto::Half:
+        return "half";
+    case Gto::String:
+        return "string";
+    case Gto::Boolean:
+        return "bool";
+    case Gto::Short:
+        return "short";
+    case Gto::Byte:
+        return "byte";
+    default:
+        return "unknown";
     }
-    return "unknown";
 }
-
-
 
 // *****************************************************************************
 // The next several functions implement the methods on our derived C++ 
@@ -143,8 +124,8 @@ Request Reader::object( const std::string &name,
     
     PyObject *returnValue = NULL;
     returnValue = PyObject_CallMethod( m_callingInstance,
-                                       "object",
-                                       "ssiO",
+                                       (char*)"object",
+                                       (char*)"ssiO",
                                        name.c_str(),                
                                        protocol.c_str(),             
                                        protocolVersion,              
@@ -179,8 +160,8 @@ Request Reader::component( const std::string &name,
     PyObject *returnValue = NULL;
     // Try calling the component method
     returnValue = PyObject_CallMethod( m_callingInstance, 
-                                       "component",
-                                       "ssO",
+                                       (char*)"component",
+                                       (char*)"ssO",
                                        name.c_str(),
                                        interp.c_str(),
                                        ci );
@@ -215,8 +196,8 @@ Request Reader::property( const std::string &name,
     PyObject *returnValue = NULL;
     // Try calling the property method with the propInfo tuple
     returnValue = PyObject_CallMethod( m_callingInstance, 
-                                       "property",
-                                       "ssO",
+                                       (char*)"property",
+                                       (char*)"ssO",
                                        name.c_str(),
                                        interp.c_str(),
                                        pi );
@@ -240,7 +221,7 @@ Request Reader::property( const std::string &name,
 // *****************************************************************************
 // Note that this method does not call any overloaded Python method, it
 // is here simply to allocate space for Gto::Reader.
-void *Reader::data( const PropertyInfo &pinfo, size_t bytes )
+void *Reader::data( const PropertyInfo &pinfo, size_t )
 {
     assert( m_callingInstance != NULL );
     
@@ -413,8 +394,9 @@ void Reader::dataRead( const PropertyInfo &pinfo )
     PyObject *pi = newPropertyInfo( this, pinfo );
 
     PyObject *returnValue = NULL;
-    returnValue = PyObject_CallMethod( m_callingInstance, "dataRead",
-                                       "sOO", 
+    returnValue = PyObject_CallMethod( m_callingInstance,
+                                       (char*)"dataRead",
+                                       (char*)"sOO", 
                                        stringFromId( pinfo.name ).c_str(),
                                        dataTuple,
                                        pi );
@@ -434,73 +416,68 @@ void Reader::dataRead( const PropertyInfo &pinfo )
     }
 }
 
-// *****************************************************************************
-// The rest of this file is dedicated to creating and implementing the Python
-// _gto.Reader class and its methods.  Note that in each of gto's methods, the 
-// first argument is PyObject *_self.  For some reason unbeknownst to me, this
-// pointer is always NULL.  The _actual_ self pointer is the first argument
-// in the PyObject *args tuple.  Go figure.
-// *****************************************************************************
 
-// *****************************************************************************
-// Implements the _gto.Reader( [mode] ) constructor
-PyObject *gtoReader_init( PyObject *_self, PyObject *args )
+static PyObject* Reader_new(PyTypeObject *type, PyObject *, PyObject *)
 {
-    PyInstanceObject *self = NULL;
+    PyReader *self = (PyReader*) type->tp_alloc(type, 0);
+
+    if (self != NULL)
+    {
+        self->m_reader = 0;
+        self->m_isOpen = false;
+    }
     
+    return (PyObject*) self;
+}
+
+static void Reader_dealloc( PyObject *self )
+{
+    PyReader *rdr = (PyReader *)self;
+    
+    if( rdr->m_reader )
+    {
+        delete rdr->m_reader;
+    }
+    
+    Py_TYPE(self)->tp_free(self);
+}
+
+static int Reader_init( PyObject *self, PyObject *args, PyObject * )
+{
     int mode = Gto::Reader::None;
     
-    if( ! PyArg_ParseTuple( args, "O|i:gtoReader_init", &self, &mode ) )
+    if( ! PyArg_ParseTuple( args, "|i:gto.Reader.__init__", &mode ) )
     {
-        // Invalid parameters, let Python do a stack trace
-        return NULL;
+        return 1;
     }
     
     Reader *creader = new Reader( (PyObject *)self, mode );
     if( ! creader )
     {
         PyErr_Format( gtoError(), "Unable to create instance of Gto::Reader. Bad parameters?" );
-        return NULL;
+        return 1;
     }
     
     // Create a new Python object to hold the pointer to the C++ reader
     // instance and add it to this Python instance's dictionary
-    gtoReader_PyObject *reader = PyObject_NEW( gtoReader_PyObject, &gtoReader_PyObjectType );
+    PyReader *prdr = (PyReader*) self;
+    prdr->m_reader = creader;
+    prdr->m_isOpen = false;
 
-    assert( reader != NULL );
-    
-    reader->m_reader = creader;
-    reader->m_isOpen = false;
-    
-    PyDict_SetItemString( self->in_dict, "__readerEngine", (PyObject *)reader );
-    
-    Py_DECREF(reader);
-
-    Py_INCREF( Py_None );
-    return Py_None;
+    return 0;
 }
 
-// *****************************************************************************
-// Implements _gto.Reader.open( filename )
-PyObject *gtoReader_open( PyObject *_self, PyObject *args )
+static PyObject *Reader_open( PyObject *self, PyObject *args )
 {
-    PyInstanceObject *self;
     char *filename;
     
-    if( ! PyArg_ParseTuple( args, "Os:gtoReader_open", &self, &filename ) )
+    if( ! PyArg_ParseTuple( args, "s:_gto.Reader.open", &filename ) )
     {
         // Invalid parameters, let Python do a stack trace
         return NULL;
     }
 
-    gtoReader_PyObject *reader = (gtoReader_PyObject *) PyDict_GetItemString( self->in_dict, "__readerEngine" );
-    if( reader == NULL )
-    {
-        PyErr_Format( gtoError(), "The open() method was called before the constructor.  If your\n"
-                                  "           derived Reader class has an __init__ method, you need to\n"
-                                  "           call gto.Reader.__init__() at the end of it." );
-        return NULL;
-    }
+    PyReader *reader = (PyReader *) self;
 
     // We set isOpen _before_ calling open, because it is the open method that
     // calls all our other crap.  If we don't do it now, we don't get another
@@ -523,24 +500,24 @@ PyObject *gtoReader_open( PyObject *_self, PyObject *args )
     return Py_None;
 }
 
-// *****************************************************************************
-// Implements _gto.Reader.fail( why )
-PyObject *gtoReader_fail( PyObject *_self, PyObject *args )
+static PyObject *Reader_fail( PyObject *self, PyObject *args )
 {
-    PyInstanceObject *self;
     char *why;
 
-    if( ! PyArg_ParseTuple( args, "Os:gtoReader_fail", &self, &why ) )
+    if( ! PyArg_ParseTuple( args, "s:_gto.Reader.fail", &why ) )
     {
         // Invalid parameters, let Python do a stack trace
         return NULL;
     }
 
-    Reader *reader = readerIfOpen( self );
-    if( reader == NULL )
+    PyReader *prdr = (PyReader*) self;
+
+    if ( !prdr->m_reader || !prdr->m_isOpen )
     {
-        return NULL;
+      return NULL;
     }
+
+    Reader *reader = prdr->m_reader;
     
     reader->fail( why );
 
@@ -548,45 +525,27 @@ PyObject *gtoReader_fail( PyObject *_self, PyObject *args )
     return Py_None;
 }
 
-// *****************************************************************************
-// Implements _gto.Reader.why()
-PyObject *gtoReader_why( PyObject *_self, PyObject *args )
+static PyObject *Reader_why( PyObject *self, PyObject * )
 {
-    PyInstanceObject *self;
+    PyReader *prdr = (PyReader*) self;
 
-    if( ! PyArg_ParseTuple( args, "O:gtoReader_why", &self ) )
+    if ( !prdr->m_reader || !prdr->m_isOpen )
     {
-        // Invalid parameters, let Python do a stack trace
-        return NULL;
+      return NULL;
     }
 
-    Reader *reader = readerIfOpen( self );
-    if( reader == NULL )
-    {
-        return NULL;
-    }
+    Reader *reader = prdr->m_reader;
     
     PyObject *errMsg = PyString_FromString( reader->why().c_str() );
     
     return errMsg;
 }
 
-// *****************************************************************************
-// Implements _gto.Reader.close()
-PyObject *gtoReader_close( PyObject *_self, PyObject *args )
+static PyObject *Reader_close( PyObject *self, PyObject * )
 {
-    PyInstanceObject *self;
-    if( ! PyArg_ParseTuple( args, "O:gtoReader_close", &self ) )
-    {
-        // Invalid parameters, let Python do a stack trace
-        return NULL;
-    }
-
-    gtoReader_PyObject *reader = (gtoReader_PyObject *) PyDict_GetItemString( self->in_dict, "__readerEngine" );
+    PyReader *reader = (PyReader *) self;
     
-    if( reader == NULL 
-        || reader->m_reader == NULL 
-        || reader->m_isOpen == false )
+    if( reader->m_reader == NULL || reader->m_isOpen == false )
     {
         PyErr_SetString( gtoError(), "no file is open." );
         return NULL;
@@ -599,119 +558,89 @@ PyObject *gtoReader_close( PyObject *_self, PyObject *args )
     return Py_None;
 }
 
-// *****************************************************************************
-// Implements a default 
-//      _gto.Reader.object( name, protocol, protocolVersion, ObjectInfo )
-PyObject *gtoReader_object( PyObject *_self, PyObject *args )
+static PyObject *Reader_object( PyObject *, PyObject *args )
 {
-    PyObject *self = NULL;
     char *name;
     char *protocol;
     int protocolVersion;
     PyObject *objInfo;
 
-    if( ! PyArg_ParseTuple( args, "OssiO:gtoReader_object", &self, &name, &protocol, &protocolVersion, &objInfo ) )
+    if( ! PyArg_ParseTuple( args, "ssiO:_gto.Reader.object", &name, &protocol, &protocolVersion, &objInfo ) )
     {
         // Invalid parameters, let Python do a stack trace
         return NULL;
     }
-    
-#ifdef DEBUG
-    cout << "object \"" << name << "\" protocol \""  << protocol << "\"";
-    cout << endl;
-#endif
     
     // Assume we want all the objects in the file
     return PyInt_FromLong( 1 );
 }
 
-// *****************************************************************************
-// Implements a default _gto.Reader.component( name, interp, ComponentInfo )
-PyObject *gtoReader_component( PyObject *_self, PyObject *args )
+static PyObject *Reader_component( PyObject *, PyObject *args )
 {
-    PyObject *self;
     char *name;
     char *interp;
     PyObject *compInfo;
 
-    if( ! PyArg_ParseTuple( args, "OssO:gtoReader_component", &self, &name, &interp, &compInfo ) )
+    if( ! PyArg_ParseTuple( args, "ssO:_gto.Reader.component", &name, &interp, &compInfo ) )
     {
         // Invalid parameters, let Python do a stack trace
         return NULL;
     }
-
-#ifdef DEBUG
-    cout << "\tcomponent \"" << name << "\"" << endl;
-#endif
 
     // Assume we want all the components in the file
     return PyInt_FromLong( 1 );
 }
 
-// *****************************************************************************
-// Implements a default _gto.Reader.property( name, interp, PropertyInfo )
-PyObject *gtoReader_property( PyObject *_self, PyObject *args )
+static PyObject *Reader_property( PyObject *, PyObject *args )
 {
-    PyObject *self;
     char *name;
     char *interp;
     PyObject *propInfo;
 
-    if( ! PyArg_ParseTuple( args, "OssO:gtoReader_property", &self, &name, &interp, &propInfo ) )
+    if( ! PyArg_ParseTuple( args, "ssO:_gto.Reader.property", &name, &interp, &propInfo ) )
     {
         // Invalid parameters, let Python do a stack trace
         return NULL;
     }
-
-#ifdef DEBUG
-    cout << "\t\tproperty " << name << endl;
-#endif
-         
+       
     // Assume we want all the properties in the file
     return PyInt_FromLong( 1 );
 }
 
-// *****************************************************************************
-// Implements a default _gto.Reader.dataRead( propertyInfo )
-PyObject *gtoReader_dataRead( PyObject *_self, PyObject *args )
+static PyObject *Reader_dataRead( PyObject *, PyObject *args )
 {
-    PyObject *self;
     char *name;
     PyObject *dataTuple;
     PyObject *propInfo;
     
-    if( ! PyArg_ParseTuple( args, "OsOO:gtoReader_dataRead", &self, &name, &dataTuple, &propInfo ) )
+    if( ! PyArg_ParseTuple( args, "sOO:_gto.Reader.dataRead", &name, &dataTuple, &propInfo ) )
     {
         // Invalid parameters, let Python do a stack trace
         return NULL;
     }
     
-#ifdef DEBUG
-    cout << "data " << name << endl;
-#endif
-     
     Py_INCREF( Py_None );
     return Py_None;
 }
 
-// *****************************************************************************
-// Implements _gto.Reader.stringFromId( int )
-PyObject *gtoReader_stringFromId( PyObject *_self, PyObject *args )
+static PyObject *Reader_stringFromId( PyObject *self, PyObject *args )
 {
-    PyInstanceObject *self;
     int id;
     
-    if( ! PyArg_ParseTuple( args, "Oi:gtoReader_stringFromId", &self, &id ) )
+    if( ! PyArg_ParseTuple( args, "i:_gto.Reader.stringFromId", &id ) )
     {
         // Invalid parameters, let Python do a stack trace
         return NULL;
     }
-    
-    Reader *reader = readerIfOpen( self );
-    if( reader == NULL )
+
+    PyReader *prdr = (PyReader*) self;
+
+    if ( !prdr->m_reader || !prdr->m_isOpen )
     {
         return NULL;
     }
+    
+    Reader *reader = prdr->m_reader;
     
     PyObject *str = PyString_FromString( reader->stringFromId( id ).c_str() );
     
@@ -719,29 +648,22 @@ PyObject *gtoReader_stringFromId( PyObject *_self, PyObject *args )
 }
 
 
-// *****************************************************************************
-// Implements _gto.Reader.stringTable()
-PyObject *gtoReader_stringTable( PyObject *_self, PyObject *args )
+static PyObject *Reader_stringTable( PyObject *self, PyObject * )
 {
-    PyInstanceObject *self;
+    PyReader *prdr = (PyReader*) self;
 
-    if( ! PyArg_ParseTuple( args, "O:gtoReader_stringTable", &self ) )
+    if ( !prdr->m_reader || !prdr->m_isOpen )
     {
-        // Invalid parameters, let Python do a stack trace
         return NULL;
     }
     
-    Reader *reader = readerIfOpen( self );
-    if( reader == NULL )
-    {
-        return NULL;
-    }
+    Reader *reader = prdr->m_reader;
     
     Gto::Reader::StringTable stringTable = reader->stringTable();
 
     PyObject *stringTableTuple = PyTuple_New( stringTable.size() );
     
-    for( int i = 0; i < stringTable.size(); ++i )
+    for( size_t i = 0; i < stringTable.size(); ++i )
     {
         PyTuple_SetItem( stringTableTuple, i, PyString_FromString( stringTable[i].c_str() ) );
     }
@@ -750,24 +672,17 @@ PyObject *gtoReader_stringTable( PyObject *_self, PyObject *args )
 }
 
 
-// *****************************************************************************
-// Implements _gto.Reader.isSwapped()
-PyObject *gtoReader_isSwapped( PyObject *_self, PyObject *args )
+static PyObject *Reader_isSwapped( PyObject *self, PyObject * )
 {
-    PyInstanceObject *self;
+    PyReader *prdr = (PyReader*) self;
 
-    if( ! PyArg_ParseTuple( args, "O:gtoReader_isSwapped", &self ) )
-    {
-        // Invalid parameters, let Python do a stack trace
-        return NULL;
-    }
-    
-    Reader *reader = readerIfOpen( self );
-    if( reader == NULL )
+    if ( !prdr->m_reader || !prdr->m_isOpen )
     {
         return NULL;
     }
     
+    Reader *reader = prdr->m_reader;
+
     if( reader->isSwapped() )
     {
         Py_INCREF( Py_True );
@@ -778,24 +693,17 @@ PyObject *gtoReader_isSwapped( PyObject *_self, PyObject *args )
     return Py_False;
 }
 
-// *****************************************************************************
-// Implements _gto.Reader.objects()
-PyObject *gtoReader_objects( PyObject *_self, PyObject *args )
+static PyObject *Reader_objects( PyObject *self, PyObject * )
 {
-    PyInstanceObject *self;
+    PyReader *prdr = (PyReader*) self;
 
-    if( ! PyArg_ParseTuple( args, "O:gtoReader_objects", &self ) )
-    {
-        // Invalid parameters, let Python do a stack trace
-        return NULL;
-    }
-
-    Reader *reader = readerIfOpen( self );
-    if( reader == NULL )
+    if ( !prdr->m_reader || !prdr->m_isOpen )
     {
         return NULL;
     }
     
+    Reader *reader = prdr->m_reader;
+
     if( reader->readMode() != Gto::Reader::RandomAccess )
     {
         PyErr_SetString( gtoError(), "file was not opened for random access." );
@@ -806,7 +714,7 @@ PyObject *gtoReader_objects( PyObject *_self, PyObject *args )
     
     PyObject *objectsTuple = PyTuple_New( objects.size() );
     
-    for( int i = 0; i < objects.size(); ++i )
+    for( size_t i = 0; i < objects.size(); ++i )
     {
         PyTuple_SetItem( objectsTuple, i, newObjectInfo( reader, objects[i] ) );
     }
@@ -814,46 +722,44 @@ PyObject *gtoReader_objects( PyObject *_self, PyObject *args )
     return objectsTuple;    
 }
 
-// *****************************************************************************
-// Implements _gto.Reader.accessObject()
-PyObject *gtoReader_accessObject( PyObject *_self, PyObject *args )
+static PyObject *Reader_accessObject( PyObject *self, PyObject *args )
 {
-    PyInstanceObject *self;
     PyObject *objInfo;
     
-    if( ! PyArg_ParseTuple( args, "OO:gtoReader_accessObject", &self, &objInfo ) )
+    if( ! PyArg_ParseTuple( args, "O:_gto.Reader.accessObject", &objInfo ) )
     {
         // Invalid parameters, let Python do a stack trace
         return NULL;
     }
 
-    if( PyTypeName( objInfo ) != "ObjectInfo" )
+    if (!PyObject_TypeCheck(objInfo, &ObjectInfoType))
     {
         PyErr_SetString( gtoError(), "accessObject requires an ObjectInfo instance" );
         return NULL;
     }
 
-    Reader *reader = readerIfOpen( self );
-    
-    if( reader == NULL )
+    PyReader *prdr = (PyReader*) self;
+
+    if ( !prdr->m_reader || !prdr->m_isOpen )
     {
         return NULL;
     }
+    
+    Reader *reader = prdr->m_reader;
     
     if( reader->readMode() != Gto::Reader::RandomAccess )
     {
         PyErr_SetString( gtoError(), "file was not opened for random access." );
         return NULL;
     }
+
+    if (((PyObjectInfo*)objInfo)->mInfo == NULL)
+    {
+        PyErr_SetString( gtoError(), "invalid object." );
+        return NULL;
+    }
     
-    // Get the original C++ ObjectInfo reference from the Python ObjectInfo
-    // class
-    PyObject *objInfoPyCObj = PyObject_GetAttrString( objInfo, "__objInfoPtr" );
-    assert( objInfoPyCObj != NULL );
-    
-    Gto::Reader::ObjectInfo &oi = *(Gto::Reader::ObjectInfo *) PyCObject_AsVoidPtr( objInfoPyCObj );
-    
-    Py_DECREF(objInfoPyCObj);
+    Gto::Reader::ObjectInfo &oi = *((Gto::Reader::ObjectInfo*) ((PyObjectInfo*)objInfo)->mInfo);
     
     if( reader->accessObject( oi ) )
     {
@@ -867,24 +773,16 @@ PyObject *gtoReader_accessObject( PyObject *_self, PyObject *args )
     }
 }
 
-// *****************************************************************************
-// Implements _gto.Reader.components()
-PyObject *gtoReader_components( PyObject *_self, PyObject *args )
+static PyObject *Reader_components( PyObject *self, PyObject * )
 {
-    PyInstanceObject *self;
-    
-    if( ! PyArg_ParseTuple( args, "O:gtoReader_components", &self ) )
-    {
-        // Invalid parameters, let Python do a stack trace
-        return NULL;
-    }
-    
-    Reader *reader = readerIfOpen( self );
-    
-    if( reader == NULL )
+    PyReader *prdr = (PyReader*) self;
+
+    if ( !prdr->m_reader || !prdr->m_isOpen )
     {
         return NULL;
     }
+    
+    Reader *reader = prdr->m_reader;
     
     if( reader->readMode() != Gto::Reader::RandomAccess )
     {
@@ -896,7 +794,7 @@ PyObject *gtoReader_components( PyObject *_self, PyObject *args )
     
     PyObject *componentsTuple = PyTuple_New( components.size() );
     
-    for( int i = 0; i < components.size(); ++i )
+    for( size_t i = 0; i < components.size(); ++i )
     {
         PyTuple_SetItem( componentsTuple, i, newComponentInfo( reader, components[i] ) );
     }
@@ -904,24 +802,66 @@ PyObject *gtoReader_components( PyObject *_self, PyObject *args )
     return componentsTuple;    
 }
 
-// *****************************************************************************
-// Implements _gto.Reader.properties()
-PyObject *gtoReader_properties( PyObject *_self, PyObject *args )
+static PyObject *Reader_accessComponent( PyObject *self, PyObject *args )
 {
-    PyInstanceObject *self;
+    PyObject *compInfo;
     
-    if( ! PyArg_ParseTuple( args, "O:gtoReader_properties", &self ) )
+    if( ! PyArg_ParseTuple( args, "O:_gto.Reader.accessComponent", &compInfo ) )
     {
         // Invalid parameters, let Python do a stack trace
         return NULL;
     }
-    
-    Reader *reader = readerIfOpen( self );
-    
-    if( reader == NULL )
+
+    if (!PyObject_TypeCheck(compInfo, &ComponentInfoType))
+    {
+        PyErr_SetString( gtoError(), "accessComponent requires a ComponentInfo instance" );
+        return NULL;
+    }
+
+    PyReader *prdr = (PyReader*) self;
+
+    if ( !prdr->m_reader || !prdr->m_isOpen )
     {
         return NULL;
     }
+    
+    Reader *reader = prdr->m_reader;
+    
+    if( reader->readMode() != Gto::Reader::RandomAccess )
+    {
+        PyErr_SetString( gtoError(), "file was not opened for random access." );
+        return NULL;
+    }
+    
+    if (((PyComponentInfo*)compInfo)->mInfo == NULL)
+    {
+        PyErr_SetString( gtoError(), "invalid component." );
+        return NULL;
+    }
+    Gto::Reader::ComponentInfo &ci = *((Gto::Reader::ComponentInfo*) ((PyComponentInfo*)compInfo)->mInfo);
+    
+    if( reader->accessComponent( ci ) )
+    {
+        Py_INCREF( Py_True );
+        return Py_True;
+    }
+    else
+    {
+        Py_INCREF( Py_False );
+        return Py_False;
+    }
+}
+
+static PyObject *Reader_properties( PyObject *self, PyObject * )
+{
+    PyReader *prdr = (PyReader*) self;
+
+    if ( !prdr->m_reader || !prdr->m_isOpen )
+    {
+        return NULL;
+    }
+    
+    Reader *reader = prdr->m_reader;
     
     if( reader->readMode() != Gto::Reader::RandomAccess )
     {
@@ -933,7 +873,7 @@ PyObject *gtoReader_properties( PyObject *_self, PyObject *args )
     
     PyObject *propertiesTuple = PyTuple_New( properties.size() );
     
-    for( int i = 0; i < properties.size(); ++i )
+    for( size_t i = 0; i < properties.size(); ++i )
     {
         PyTuple_SetItem( propertiesTuple, i, newPropertyInfo( reader, properties[i] ) );
     }
@@ -941,6 +881,125 @@ PyObject *gtoReader_properties( PyObject *_self, PyObject *args )
     return propertiesTuple;    
 }
 
+static PyObject *Reader_accessProperty( PyObject *self, PyObject *args )
+{
+    PyObject *propInfo;
+    
+    if( ! PyArg_ParseTuple( args, "O:_gto.Reader.accessProperty", &propInfo ) )
+    {
+        // Invalid parameters, let Python do a stack trace
+        return NULL;
+    }
+
+    if (!PyObject_TypeCheck(propInfo, &PropertyInfoType))
+    {
+        PyErr_SetString( gtoError(), "accessProperty requires a ComponentInfo instance" );
+        return NULL;
+    }
+
+    PyReader *prdr = (PyReader*) self;
+
+    if ( !prdr->m_reader || !prdr->m_isOpen )
+    {
+        return NULL;
+    }
+    
+    Reader *reader = prdr->m_reader;
+    
+    if( reader->readMode() != Gto::Reader::RandomAccess )
+    {
+        PyErr_SetString( gtoError(), "file was not opened for random access." );
+        return NULL;
+    }
+    
+    if (((PyPropertyInfo*)propInfo)->mInfo == NULL)
+    {
+        PyErr_SetString( gtoError(), "invalid property." );
+        return NULL;
+    }
+    Gto::Reader::PropertyInfo &pi = *((Gto::Reader::PropertyInfo*) ((PyPropertyInfo*)propInfo)->mInfo);
+    
+    if( reader->accessProperty( pi ) )
+    {
+        Py_INCREF( Py_True );
+        return Py_True;
+    }
+    else
+    {
+        Py_INCREF( Py_False );
+        return Py_False;
+    }
+}
+
+static PyMethodDef ReaderMethods[] = 
+{
+    {"open", Reader_open, METH_VARARGS, "open( string filename )"},
+    {"fail", Reader_fail, METH_VARARGS, "fail( string why )"},
+    {"why", Reader_why, METH_VARARGS, "why()"},
+    {"close", Reader_close, METH_VARARGS, "close()"},
+    {"object", Reader_object, METH_VARARGS, "object( string name, string protocol, unsigned int protocolVersion, ObjectInfo header )"},
+    {"component", Reader_component, METH_VARARGS, "component( string name, ComponentInfo header )"},
+    {"property", Reader_property, METH_VARARGS, "property( string name, PropertyInfo header )"},
+    {"dataRead", Reader_dataRead, METH_VARARGS, "dataRead( PropertyInfo pinfo )"},
+    {"stringFromId", Reader_stringFromId, METH_VARARGS, "stringFromId( int i )"},
+    {"stringTable", Reader_stringTable, METH_VARARGS, "stringTable()"},
+    {"isSwapped", Reader_isSwapped, METH_VARARGS, "isSwapped()"},
+    {"objects", Reader_objects, METH_VARARGS, "objects()"},
+    {"accessObject", Reader_accessObject, METH_VARARGS, "accessObject( objectInfo )"},
+    {"components", Reader_components, METH_VARARGS, "components()"},
+    {"accessComponent", Reader_accessComponent, METH_VARARGS, "accessComponent( componentInfo )"},
+    {"properties", Reader_properties, METH_VARARGS, "properties()"},
+    {"accessProperty", Reader_accessProperty, METH_VARARGS, "accessProperty( propertyInfo )"},
+    {NULL, NULL, 0, NULL}
+};
+
+
+PyTypeObject ReaderType;
+
+bool initReader(PyObject *module)
+{
+    memset(&ReaderType, 0, sizeof(PyTypeObject));
+
+    PyObject *value;
+
+    PyObject *classMembers = PyDict_New();
+    value = PyInt_FromLong( Gto::Reader::None );
+    PyDict_SetItemString( classMembers, "None", value );
+    Py_DECREF(value);
+    value = PyInt_FromLong( Gto::Reader::HeaderOnly );
+    PyDict_SetItemString( classMembers, "HeaderOnly", value );
+    Py_DECREF(value);
+    value = PyInt_FromLong( Gto::Reader::RandomAccess );
+    PyDict_SetItemString( classMembers, "RandomAccess", value );
+    Py_DECREF(value);
+    value = PyInt_FromLong( Gto::Reader::BinaryOnly );
+    PyDict_SetItemString( classMembers, "BinaryOnly", value );
+    Py_DECREF(value);
+    value = PyInt_FromLong( Gto::Reader::TextOnly );
+    PyDict_SetItemString( classMembers, "TextOnly", value );
+    Py_DECREF(value);
+
+    INIT_REFCNT(ReaderType);
+    ReaderType.tp_name = "_gto.Reader";
+    ReaderType.tp_basicsize = sizeof(PyReader);
+    ReaderType.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
+    ReaderType.tp_new = Reader_new;
+    ReaderType.tp_init = Reader_init;
+    ReaderType.tp_dealloc = Reader_dealloc;
+    ReaderType.tp_methods = ReaderMethods;
+    ReaderType.tp_doc = ReaderDocString;
+    ReaderType.tp_dict = classMembers;
+
+    if (PyType_Ready(&ReaderType) < 0)
+    {
+        return false;
+    }
+
+    Py_INCREF(&ReaderType);
+    PyModule_AddObject(module, "Reader", (PyObject *)&ReaderType);
+
+    return true;
+}
 
 
 } // End namespace PyGto

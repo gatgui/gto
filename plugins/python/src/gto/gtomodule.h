@@ -39,8 +39,15 @@
 
 #include <Python.h>
 #include <string>
+#include "py3compat.h"
 
 namespace PyGto {
+
+extern PyTypeObject ReaderType;
+extern PyTypeObject WriterType;
+extern PyTypeObject ObjectInfoType;
+extern PyTypeObject ComponentInfoType;
+extern PyTypeObject PropertyInfoType;
 
 // *****************************************************************************
 // Just returns a pointer to the module-wide g_gtoError object

@@ -39,20 +39,17 @@
 
 namespace PyGto {
 
+static char WriterDocString[] = 
+"\n"
+"The Writer class is designed as an API to a state machine. You indicate\n"
+"a conceptual hierarchy to the file and then all the data. The writer\n"
+"handles generating the string table, the header information, etc.\n"
+"\n";
+
+
 // *****************************************************************************
 // We start with a few utility functions...
 // *****************************************************************************
-
-// *****************************************************************************
-// Properly deallocate the instance-specific stuff-holder object
-void gtoWriter_PyObject_dealloc( PyObject *self )
-{
-    assert( self != NULL );
-    gtoWriter_PyObject *gwSelf = (gtoWriter_PyObject *)self;
-    delete gwSelf->m_writer;
-    delete gwSelf->m_propertyNames;    
-    PyObject_DEL( self );
-}
 
 // *****************************************************************************
 // Flatten a tuple or list into a C array of any type using the converter
@@ -77,70 +74,11 @@ template<typename T> int flatten( PyObject *object,
         return pos;
     }
     
-    bool objectOverride = false;
-    
-    // If we come across a class instance, do we know what to do with it?
-    if( PyInstance_Check( object ) )
+    if (!PyList_Check(object) && !PyTuple_Check(object))
     {
-        std::string classname = PyTypeName( object );
-
-        // If we know what it is, convert it to something useful
-        if( classname == "mat3" || classname == "mat4" )
-        {
-            // mat3 and mat4 convert easily to a list
-            PyObject *tmp = PyObject_GetAttrString( object, "mlist" );
-            
-            objectOverride = true;
-            object = tmp;
-        }
-        else if( classname == "vec3" || classname == "vec4" )
-        {
-            // vec3 and vec4 have no handy .toList() method, so we have
-            // to do it the 'hard way'...
-            PyObject *tmp;
-            tmp = (classname == "vec3" ? PyTuple_New(3) : PyTuple_New(4));
-
-            PyObject *x = PyObject_GetAttrString( object, "x" );
-            PyObject *y = PyObject_GetAttrString( object, "y" );
-            PyObject *z = PyObject_GetAttrString( object, "z" );
-            
-            PyTuple_SetItem( tmp, 0, x );
-            PyTuple_SetItem( tmp, 1, y );
-            PyTuple_SetItem( tmp, 2, z );
-            
-            if( classname == "vec4" )
-            {
-                PyObject *w = PyObject_GetAttrString( object, "w" );
-                PyTuple_SetItem( tmp, 3, w );
-            }
-            
-            objectOverride = true;
-            object = tmp;
-        }
-        else if( classname == "quat" )
-        {
-            // quat has no handy .toList() method either...
-            PyObject *tmp = PyTuple_New(4);
-
-            PyObject *w = PyObject_GetAttrString( object, "w" );
-            PyObject *x = PyObject_GetAttrString( object, "x" );
-            PyObject *y = PyObject_GetAttrString( object, "y" );
-            PyObject *z = PyObject_GetAttrString( object, "z" );
-            
-            PyTuple_SetItem( tmp, 0, w );
-            PyTuple_SetItem( tmp, 1, x );
-            PyTuple_SetItem( tmp, 2, y );
-            PyTuple_SetItem( tmp, 3, z );
-            
-            objectOverride = true;
-            object = tmp;
-        }
-        else
-        {
-            // Otherwise, barf on it
-            PyErr_Format( gtoError(), "Can't handle '%s' class data directly. Convert it to a tuple or list first.", classname.c_str() );
-            return -1;
-        }
+        std::string classname = PyTypeName(object);
+        PyErr_Format( gtoError(), "Can't handle '%s' class data directly. Convert it to a tuple or list first.", classname.c_str() );
+        return -1;
     }
 
     // Put atoms directly into the buffer, and recurse on more complex types
@@ -148,7 +86,8 @@ template<typename T> int flatten( PyObject *object,
     {
         PyObject *item = PySequence_GetItem( object, i );
         
-        if( PyTuple_Check( item ) || PyList_Check( item ) || PyInstance_Check( item ) )
+        // Get rid of this PyInstance_Check
+        if( PyTuple_Check( item ) || PyList_Check( item ) )
         {
             flatten( item, data, maxItems, expectedTypeStr, converter, false );
         }
@@ -159,12 +98,6 @@ template<typename T> int flatten( PyObject *object,
             
             if( PyErr_Occurred() )
             {
-                if( objectOverride )
-                {
-                    // object pointer was replace on the stack by a new python object
-                    Py_DECREF(object);
-                }
-                
                 Py_DECREF(item);
                 
                 if( PyErr_ExceptionMatches( PyExc_TypeError ) )
@@ -187,12 +120,6 @@ template<typename T> int flatten( PyObject *object,
         Py_DECREF(item);
     }
     
-    if( objectOverride )
-    {
-        // object pointer was replace on the stack by a new python object
-        Py_DECREF(object);
-    }
-    
     return pos;
 }
 
@@ -203,112 +130,120 @@ template<typename T> int flatten( PyObject *object,
 // class.
 // *****************************************************************************
 
-// *****************************************************************************
-// _gto.Writer class constructor. Does nothing, but is required anyway
-PyObject *gtoWriter_init( PyObject *_self, PyObject *args )
+static PyObject* Writer_new( PyTypeObject *type, PyObject *, PyObject * )
 {
-    Py_INCREF( Py_None );
-    return Py_None;
+    PyWriter *self = (PyWriter*) type->tp_alloc(type, 0);
+    if (self)
+    {
+        self->m_writer = 0;
+        self->m_propCount = 0;
+        self->m_beginDataCalled = false;
+        self->m_objectDef = false;
+        self->m_componentDef = false;
+        self->m_propertyNames = 0;
+    }
+    return (PyObject*) self;
 }
 
-// *****************************************************************************
-// Implements _gto.Writer.open( filename )
-PyObject *gtoWriter_open( PyObject *_self, PyObject *args )
+static void Writer_dealloc( PyObject *self )
 {
-    PyInstanceObject *self;
+    PyWriter *pw = (PyWriter *)self;
+    if (pw->m_writer)
+    {
+        delete pw->m_writer;
+    }
+    if (pw->m_propertyNames)
+    {
+        delete pw->m_propertyNames;
+    }
+    Py_TYPE(self)->tp_free(self);
+}
+
+static int Writer_init( PyObject *self, PyObject *, PyObject * )
+{
+    PyWriter *pw = (PyWriter*) self;
+
+    pw->m_writer = new Gto::Writer();
+    pw->m_propertyNames = new std::vector<std::string>();
+
+    return 0;
+}
+
+static PyObject *Writer_open( PyObject *self, PyObject *args )
+{
     char *filename;
     Gto::Writer::FileType filemode = Gto::Writer::BinaryGTO;
 
-    if( ! PyArg_ParseTuple( args, "Os|i:gtoWriter_open", &self, &filename, &filemode ) )
+    if( ! PyArg_ParseTuple( args, "s|i:_gto.Writer.open", &filename, &filemode ) )
     {
         // Invalid parameters, let Python do a stack trace
         return NULL;
     }
 
-    // Create a new python writer object and add it to this instance's
-    // dictionary
-    gtoWriter_PyObject *writer = PyObject_NEW( gtoWriter_PyObject, &gtoWriter_PyObjectType );
-    writer->m_writer = new Gto::Writer();
-    writer->m_propCount = 0;
-    writer->m_beginDataCalled = false;
-    writer->m_objectDef = false;
-    writer->m_componentDef = false;
-    writer->m_propertyNames = new std::vector<std::string>;
+    PyWriter *writer = (PyWriter*) self;
 
-    PyDict_SetItemString( self->in_dict, "__writerEngine", (PyObject *)writer );
-    
-    Py_DECREF(writer);
-    
+    if (!writer->m_writer || !writer->m_propertyNames)
+    {
+        return NULL;
+    }
+
     // Ask the writer to open the given file
     if( ! writer->m_writer->open( filename, filemode ) )
     {
         PyErr_Format( gtoError(), "Unable to open specified file: %s", filename );
         return NULL;
     }
+
+    writer->m_propCount = 0;
+    writer->m_beginDataCalled = false;
+    writer->m_objectDef = false;
+    writer->m_componentDef = false;
+    writer->m_propertyNames->clear();
     
     Py_INCREF( Py_None );
     return Py_None;
 }
 
-// *****************************************************************************
-// Implements _gto.Writer.close()
-PyObject *gtoWriter_close( PyObject *_self, PyObject *args )
+static PyObject *Writer_close( PyObject *self, PyObject * )
 {
-    PyInstanceObject *self;
+    PyWriter *writer = (PyWriter*) self;
     
-    if( ! PyArg_ParseTuple( args, "O:gtoWriter_close", &self ) )
+    if (!writer->m_writer || !writer->m_propertyNames)
     {
-        // Invalid parameters, let Python do a stack trace
         return NULL;
     }
-    
-    // Get a handle to our Gto::Writer instance
-    gtoWriter_PyObject *writer = (gtoWriter_PyObject *) PyDict_GetItemString( self->in_dict, "__writerEngine" );
-    
-    if( writer == NULL )
-    {
-        PyErr_SetString( gtoError(), "no file is open." );
-        return NULL;
-    }
-    
-    assert( writer->m_writer != NULL );
-    
-    // Close the file
+
     writer->m_writer->close();
-    
-    // Remove the writer from the class dictionary
-    PyDict_DelItemString( self->in_dict, "__writerEngine" );
+
+    writer->m_propCount = 0;
+    writer->m_beginDataCalled = false;
+    writer->m_objectDef = false;
+    writer->m_componentDef = false;
+    writer->m_propertyNames->clear();
     
     Py_INCREF( Py_None );
     return Py_None;
 }
 
-// *****************************************************************************
-// Implements _gto.Writer.beginObject( name, protocol, protocolVersion )
-PyObject *gtoWriter_beginObject( PyObject *_self, PyObject *args )
+static PyObject *Writer_beginObject( PyObject *self, PyObject *args )
 {
-    PyInstanceObject *self;
     char *name;
     char *protocol;
     unsigned int protocolVersion;
     
-    if( ! PyArg_ParseTuple( args, "Ossi:gtoWriter_beginObject", &self, &name, &protocol, &protocolVersion ) )
+    if( ! PyArg_ParseTuple( args, "ssi:_gto.Writer.beginObject", &name, &protocol, &protocolVersion ) )
     {
         // Invalid parameters, let Python do a stack trace
         return NULL;
     }
     
-    // Get a handle to our Gto::Writer instance
-    gtoWriter_PyObject *writer = (gtoWriter_PyObject *) PyDict_GetItemString( self->in_dict, "__writerEngine" );
+    PyWriter *writer = (PyWriter*) self;
     
-    if( writer == NULL )
+    if (!writer->m_writer)
     {
-        PyErr_SetString( gtoError(), "no file is open." );
         return NULL;
     }
-    
-    assert( writer->m_writer != NULL );
-    
+
     // Check for dumbassness
     if( writer->m_objectDef == true )
     {
@@ -330,28 +265,14 @@ PyObject *gtoWriter_beginObject( PyObject *_self, PyObject *args )
     return Py_None;
 }
 
-// *****************************************************************************
-// Implements _gto.Writer.endObject()
-PyObject *gtoWriter_endObject( PyObject *_self, PyObject *args )
+static PyObject *Writer_endObject( PyObject *self, PyObject * )
 {
-    PyInstanceObject *self;
+    PyWriter *writer = (PyWriter*) self;
     
-    if( ! PyArg_ParseTuple( args, "O:gtoWriter_endObject", &self ) )
+    if (!writer->m_writer)
     {
-        // Invalid parameters, let Python do a stack trace
         return NULL;
     }
-    
-    // Get a handle to our Gto::Writer instance
-    gtoWriter_PyObject *writer = (gtoWriter_PyObject *) PyDict_GetItemString( self->in_dict, "__writerEngine" );
-    
-    if( writer == NULL )
-    {
-        PyErr_SetString( gtoError(), "no file is open." );
-        return NULL;
-    }
-    
-    assert( writer->m_writer != NULL );
 
     // Check for dumbassness
     if( writer->m_objectDef == false )
@@ -368,37 +289,30 @@ PyObject *gtoWriter_endObject( PyObject *_self, PyObject *args )
     return Py_None;
 }
 
-// *****************************************************************************
-// Implements _gto.Writer.beginComponent( name, interp, flags )
-PyObject *gtoWriter_beginComponent( PyObject *_self, PyObject *args )
+static PyObject *Writer_beginComponent( PyObject *self, PyObject *args )
 {
-    PyInstanceObject *self;
     char *name;
-    char *interp = "";
+    char *interp = (char*)"";
     int flags = 0;
     
     // Try GTOv2 prototype first...
-    if( ! PyArg_ParseTuple( args, "Os|i:gtoWriter_beginComponent", &self, &name, &flags ) )
+    if( ! PyArg_ParseTuple( args, "s|i:_gto.Writer.beginComponent", &name, &flags ) )
     {
         PyErr_Clear();
         // If that doesn't work, try the GTOv3 prototype
-        if( ! PyArg_ParseTuple( args, "Oss|i:gtoWriter_beginComponent", &self, &name, &interp, &flags ) )
+        if( ! PyArg_ParseTuple( args, "ss|i:_gto.Writer.beginComponent", &name, &interp, &flags ) )
         {
             // Invalid parameters, let Python do a stack trace
             return NULL;
         }
     }
     
-    // Get a handle to our Gto::Writer instance
-    gtoWriter_PyObject *writer = (gtoWriter_PyObject *) PyDict_GetItemString( self->in_dict, "__writerEngine" );
+    PyWriter *writer = (PyWriter*) self;
     
-    if( writer == NULL )
+    if (!writer->m_writer)
     {
-        PyErr_SetString( gtoError(), "no file is open." );
         return NULL;
     }
-    
-    assert( writer->m_writer != NULL );
     
     // Check for dumbassness
     if( writer->m_objectDef == false )
@@ -421,28 +335,14 @@ PyObject *gtoWriter_beginComponent( PyObject *_self, PyObject *args )
     return Py_None;
 }
 
-// *****************************************************************************
-// Implements _gto.Writer.endComponent()
-PyObject *gtoWriter_endComponent( PyObject *_self, PyObject *args )
+static PyObject *Writer_endComponent( PyObject *self, PyObject * )
 {
-    PyInstanceObject *self;
+    PyWriter *writer = (PyWriter*) self;
     
-    if( ! PyArg_ParseTuple( args, "O:gtoWriter_endComponent", &self ) )
+    if (!writer->m_writer)
     {
-        // Invalid parameters, let Python do a stack trace
         return NULL;
     }
-    
-    // Get a handle to our Gto::Writer instance
-    gtoWriter_PyObject *writer = (gtoWriter_PyObject *) PyDict_GetItemString( self->in_dict, "__writerEngine" );
-    
-    if( writer == NULL )
-    {
-        PyErr_SetString( gtoError(), "no file is open." );
-        return NULL;
-    }
-    
-    assert( writer->m_writer != NULL );
     
     // Check for dumbassness
     if( writer->m_componentDef == false )
@@ -459,33 +359,26 @@ PyObject *gtoWriter_endComponent( PyObject *_self, PyObject *args )
     return Py_None;
 }
 
-// *****************************************************************************
-// Implements _gto.Writer.property( name, type, numElements, width, interp )
-PyObject *gtoWriter_property( PyObject *_self, PyObject *args )
+static PyObject *Writer_property( PyObject *self, PyObject *args )
 {
-    PyInstanceObject *self;
     char *name;
     int type;
     int numElements;
     int width = 1;
-    char *interp = "";
+    char *interp = (char*)"";
     
-    if( ! PyArg_ParseTuple( args, "Osii|is:gtoWriter_property", &self, &name, &type, &numElements,  &width, &interp ) )
+    if( ! PyArg_ParseTuple( args, "sii|is:_gto.Writer.property", &name, &type, &numElements,  &width, &interp ) )
     {
         // Invalid parameters, let Python do a stack trace
         return NULL;
     }
     
-    // Get a handle to our Gto::Writer instance
-    gtoWriter_PyObject *writer = (gtoWriter_PyObject *) PyDict_GetItemString( self->in_dict, "__writerEngine" );
+    PyWriter *writer = (PyWriter*) self;
     
-    if( writer == NULL )
+    if (!writer->m_writer || !writer->m_propertyNames)
     {
-        PyErr_SetString( gtoError(), "no file is open." );
         return NULL;
     }
-    
-    assert( writer->m_writer != NULL );
     
     // Check for dumbassness    
     if( writer->m_objectDef == false || writer->m_componentDef == false )
@@ -508,34 +401,27 @@ PyObject *gtoWriter_property( PyObject *_self, PyObject *args )
     return Py_None;
 }
 
-// *****************************************************************************
-// implements _gto.Writer.intern( string | tuple | list )
-PyObject *gtoWriter_intern( PyObject *_self, PyObject *args )
+static PyObject *Writer_intern( PyObject *self, PyObject *args )
 {
-    PyInstanceObject *self;
     PyObject *data;
 
-    if( ! PyArg_ParseTuple( args, "OO:gtoWriter_intern", &self, &data ) )
+    if( ! PyArg_ParseTuple( args, "O:_gto.Writer.intern", &data ) )
     {
         // Invalid parameters, let Python do a stack trace
         return NULL;
     }
     
-    // Get a handle to our Gto::Writer instance
-    gtoWriter_PyObject *writer = (gtoWriter_PyObject *) PyDict_GetItemString( self->in_dict, "__writerEngine" );
+    PyWriter *writer = (PyWriter*) self;
     
-    if( writer == NULL )
+    if (!writer->m_writer)
     {
-        PyErr_SetString( gtoError(), "no file is open." );
         return NULL;
     }
-    
-    assert( writer->m_writer != NULL );
     
     // Handle a single string
     if( PyString_Check( data ) )
     {
-        writer->m_writer->intern( PyString_AsString( data ) );
+        writer->m_writer->intern( PyString_AsStdString( data ) );
     }
     // Handle a bunch of strings all at once
     else if( PySequence_Check( data ) )
@@ -549,7 +435,7 @@ PyObject *gtoWriter_intern( PyObject *_self, PyObject *args )
                 PyErr_SetString( gtoError(), "Non-string in sequence" );
                 return NULL;
             }
-            writer->m_writer->intern( PyString_AsString( pstr ) );
+            writer->m_writer->intern( PyString_AsStdString( pstr ) );
             Py_DECREF(pstr);
         }
     }
@@ -564,29 +450,22 @@ PyObject *gtoWriter_intern( PyObject *_self, PyObject *args )
     return Py_None;
 }
 
-// *****************************************************************************
-// implements _gto.Writer.lookup( string )
-PyObject *gtoWriter_lookup( PyObject *_self, PyObject *args )
+static PyObject *Writer_lookup( PyObject *self, PyObject *args )
 {
-    PyInstanceObject *self;
     char *str;
     
-    if( ! PyArg_ParseTuple( args, "Os:gtoWriter_lookup", &self, &str ) )
+    if( ! PyArg_ParseTuple( args, "s:_gto.Writer.lookup", &str ) )
     {
         // Invalid parameters, let Python do a stack trace
         return NULL;
     }
     
-    // Get a handle to our Gto::Writer instance
-    gtoWriter_PyObject *writer = (gtoWriter_PyObject *) PyDict_GetItemString( self->in_dict, "__writerEngine" );
+    PyWriter *writer = (PyWriter*) self;
     
-    if( writer == NULL )
+    if (!writer->m_writer)
     {
-        PyErr_SetString( gtoError(), "no file is open." );
         return NULL;
     }
-    
-    assert( writer->m_writer != NULL );
     
     // Check for dumbassness
     if( writer->m_beginDataCalled == false )
@@ -599,28 +478,14 @@ PyObject *gtoWriter_lookup( PyObject *_self, PyObject *args )
     return PyInt_FromLong( writer->m_writer->lookup( str ) );
 }
 
-// *****************************************************************************
-// implements _gto.Writer.beginData()
-PyObject *gtoWriter_beginData( PyObject *_self, PyObject *args )
+static PyObject *Writer_beginData( PyObject *self, PyObject * )
 {
-    PyInstanceObject *self;
+    PyWriter *writer = (PyWriter*) self;
     
-    if( ! PyArg_ParseTuple( args, "O:gtoWriter_beginData", &self ) )
+    if (!writer->m_writer)
     {
-        // Invalid parameters, let Python do a stack trace
         return NULL;
     }
-    
-    // Get a handle to our Gto::Writer instance
-    gtoWriter_PyObject *writer = (gtoWriter_PyObject *) PyDict_GetItemString( self->in_dict, "__writerEngine" );
-    
-    if( writer == NULL )
-    {
-        PyErr_SetString( gtoError(), "no file is open." );
-        return NULL;
-    }
-    
-    assert( writer->m_writer != NULL );
     
     // Check for dumbassness
     if( writer->m_writer->properties().size() == 0 )
@@ -637,28 +502,14 @@ PyObject *gtoWriter_beginData( PyObject *_self, PyObject *args )
     return Py_None;
 }
 
-// *****************************************************************************
-// implements _gto.Writer.endData()
-PyObject *gtoWriter_endData( PyObject *_self, PyObject *args )
+static PyObject *Writer_endData( PyObject *self, PyObject * )
 {
-    PyInstanceObject *self;
+    PyWriter *writer = (PyWriter*) self;
     
-    if( ! PyArg_ParseTuple( args, "O:gtoWriter_endData", &self ) )
+    if (!writer->m_writer)
     {
-        // Invalid parameters, let Python do a stack trace
         return NULL;
     }
-    
-    // Get a handle to our Gto::Writer instance
-    gtoWriter_PyObject *writer = (gtoWriter_PyObject *) PyDict_GetItemString( self->in_dict, "__writerEngine" );
-    
-    if( writer == NULL )
-    {
-        PyErr_SetString( gtoError(), "no file is open." );
-        return NULL;
-    }
-    
-    assert( writer->m_writer != NULL );
     
     // Check for dumbassness
     if( writer->m_beginDataCalled == false )
@@ -674,31 +525,23 @@ PyObject *gtoWriter_endData( PyObject *_self, PyObject *args )
     return Py_None;
 }
 
-
-// *****************************************************************************
-// implements _gto.Writer.propertyData( data )
-PyObject *gtoWriter_propertyData( PyObject *_self, PyObject *args )
+static PyObject *Writer_propertyData( PyObject *self, PyObject *args )
 {
-    PyInstanceObject *self;
     PyObject *rawdata;
     bool rawdataOverride = false;
     
-    if( ! PyArg_ParseTuple( args, "OO:gtoWriter_propertyData", &self, &rawdata ) )
+    if( ! PyArg_ParseTuple( args, "O:_gto.Writer.propertyData", &rawdata ) )
     {
         // Invalid parameters, let Python do a stack trace
         return NULL;
     }
     
-    // Get a handle to our Gto::Writer instance
-    gtoWriter_PyObject *writer = (gtoWriter_PyObject *) PyDict_GetItemString( self->in_dict, "__writerEngine" );
+    PyWriter *writer = (PyWriter*) self;
     
-    if( writer == NULL )
+    if (!writer->m_writer || !writer->m_propertyNames)
     {
-        PyErr_SetString( gtoError(), "no file is open." );
         return NULL;
     }
-    
-    assert( writer->m_writer != NULL );
     
     // Check for dumbassness
     if( ! writer->m_beginDataCalled )
@@ -724,7 +567,7 @@ PyObject *gtoWriter_propertyData( PyObject *_self, PyObject *args )
     // and do some sanity checking
     Gto::PropertyHeader prop = writer->m_writer->properties()[writer->m_propCount];
     
-    if( writer->m_propCount >= writer->m_writer->properties().size() )
+    if( size_t(writer->m_propCount) >= writer->m_writer->properties().size() )
     {
         if( rawdataOverride )
         {
@@ -871,8 +714,8 @@ PyObject *gtoWriter_propertyData( PyObject *_self, PyObject *args )
     }
     case Gto::String:
     {
-        char **strings = new char *[dataSize];
-        int numItems = flatten( rawdata, strings, dataSize, "string", PyString_AsString );
+        std::string *strings = new std::string[dataSize];
+        int numItems = flatten( rawdata, strings, dataSize, "string", PyString_AsStdString );
         
         if( PyErr_Occurred() == NULL )
         {
@@ -896,7 +739,7 @@ PyObject *gtoWriter_propertyData( PyObject *_self, PyObject *args )
                         PyErr_Format( gtoError(),
                                       "'%s' needs to be \"interned\" before it can "
                                       "be used as data in property #%d",
-                                      strings[i], writer->m_propCount );
+                                      strings[i].c_str(), writer->m_propCount );
                         break;
                     }
                 }
@@ -930,5 +773,62 @@ PyObject *gtoWriter_propertyData( PyObject *_self, PyObject *args )
     return retval;
 }
 
+static PyMethodDef WriterMethods[] = 
+{
+    {"open", Writer_open, METH_VARARGS, "open( filename )"},
+    {"close", Writer_close, METH_VARARGS, "close()"},
+    {"beginObject", Writer_beginObject, METH_VARARGS, "beginObject( string name, string protocol )"},
+    {"endObject", Writer_endObject, METH_VARARGS, "endObject()"},
+    {"beginComponent", Writer_beginComponent, METH_VARARGS, "beginComponent( string name, transposed = false )"},
+    {"endComponent", Writer_endComponent, METH_VARARGS, "endComponent()"},
+    {"property", Writer_property, METH_VARARGS, "property( string name, int type, int numElements, int partsPerElement  )"},
+    {"intern", Writer_intern, METH_VARARGS, "intern(string)"},
+    {"lookup", Writer_lookup, METH_VARARGS, "lookup(string)"},
+    {"beginData", Writer_beginData, METH_VARARGS, "beginData()"},
+    {"propertyData", Writer_propertyData, METH_VARARGS, "propertyData( tuple data )"},
+    {"endData", Writer_endData, METH_VARARGS, "endData()"},
+    {NULL, NULL, 0, NULL}
+};
+
+PyTypeObject WriterType;
+
+bool initWriter(PyObject *module)
+{
+    memset(&WriterType, 0, sizeof(PyTypeObject));
+
+    PyObject *value;
+
+    PyObject *classMembers = PyDict_New();
+    value = PyInt_FromLong( Gto::Writer::BinaryGTO );
+    PyDict_SetItemString( classMembers, "BinaryGTO", value );
+    Py_DECREF(value);
+    value = PyInt_FromLong( Gto::Writer::TextGTO );
+    PyDict_SetItemString( classMembers, "TextGTO", value );
+    Py_DECREF(value);
+    value = PyInt_FromLong( Gto::Writer::CompressedGTO );
+    PyDict_SetItemString( classMembers, "CompressedGTO", value );
+    Py_DECREF(value);
+
+    INIT_REFCNT(WriterType);
+    WriterType.tp_name = "_gto.Writer";
+    WriterType.tp_basicsize = sizeof(PyWriter);
+    WriterType.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
+    WriterType.tp_new = Writer_new;
+    WriterType.tp_init = Writer_init;
+    WriterType.tp_dealloc = Writer_dealloc;
+    WriterType.tp_methods = WriterMethods;
+    WriterType.tp_doc = WriterDocString;
+    WriterType.tp_dict = classMembers;
+
+    if (PyType_Ready(&WriterType) < 0)
+    {
+        return false;
+    }
+
+    Py_INCREF(&WriterType);
+    PyModule_AddObject(module, "Writer", (PyObject *)&WriterType);
+
+    return true;
+}
 
 }; // End namespace PyGto

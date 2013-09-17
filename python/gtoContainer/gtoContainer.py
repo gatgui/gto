@@ -120,7 +120,7 @@ import gto
 import operator
 
 #############################################
-class Property:
+class Property(object):
     """ 
     Represents a single GTO property and the data it contains.  Property
     data can be accessed in any of three ways:
@@ -134,8 +134,8 @@ class Property:
     size(), width(), etc.)
         
     """
-    def __init__( self, name, pType, size = None, width = None, data = None, 
-                  interp = None ):
+    def __init__( self, name, pType, size = None, width = None, data = None, interp = None ):
+        object.__init__(self)
         self.__name = name
         self.__pType = pType
         self.__size = size
@@ -281,7 +281,7 @@ class Property:
     
 
 #############################################
-class Component:
+class Component(object):
     """
     Represents a single GTO component which may contain any number of 
     properties.  Information about the component itself is had via
@@ -318,8 +318,8 @@ class Component:
             ....
     
     """
-    def __init__( self, name, interp = None, flags = 0, 
-                  object = None ):
+    def __init__( self, name, interp = None, flags = 0, object = None ):
+        object.__init__(self)
         self.__name = name
         self.__interp = interp
         self.__flags = flags
@@ -499,7 +499,7 @@ class Component:
 
     
 #############################################
-class Object:
+class Object(object):
     """
     Represents a single GTO Object which may contain any number of 
     components.  Information about the object itself is had via
@@ -541,6 +541,7 @@ class Object:
     
     """
     def __init__( self, name, protocol, version ):
+        object.__init__(self)
         self.__name = name
         self.__protocol = protocol
         self.__protocolVersion = version

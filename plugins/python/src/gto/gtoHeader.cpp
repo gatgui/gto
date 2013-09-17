@@ -37,91 +37,142 @@
 #include "gtoHeader.h"
 
 namespace PyGto {
-using namespace std;
 
 // *****************************************************************************
 //          ObjectInfo Class
 // *****************************************************************************
 
-// *****************************************************************************
-// Implements ObjectInfo.__init__(self)
-PyObject *ObjectInfo_init( PyObject *_self, PyObject *args )
+static int ObjectInfo_init( PyObject *self, PyObject *, PyObject * )
 {
-    Py_INCREF( Py_None );
-    return Py_None;
+    PyObjectInfo *oi = (PyObjectInfo*) self;
+    oi->mName = PyString_FromString("");
+    oi->mProtocol = PyString_FromString("");
+    oi->mProtocolVersion = PyInt_FromLong(0);
+    oi->mNumComponents = PyInt_FromLong(0);
+    oi->mPad = PyInt_FromLong(0);
+    oi->mInfo = NULL;
+    return 0;
 }
 
-// *****************************************************************************
-// Implements ObjectInfo.__repr__(self)
-PyObject *ObjectInfo_repr( PyObject *_self, PyObject *args )
+static void ObjectInfo_dealloc(PyObject* self)
 {
-    PyObject *self;
-
-    if( ! PyArg_ParseTuple( args, "O", &self ) )
-    {
-        // Invalid parameters, let Python do a stack trace
-        return NULL;
-    }
-    
-    PyObject *reprStr = NULL;
-    
-    PyObject *name = PyObject_GetAttrString( self, "name" );
-    
-    if( name == NULL )
-    {
-        reprStr = PyString_FromString( "<INVALID ObjectInfo object>" );
-    }
-    else
-    {
-      reprStr = PyString_FromFormat( "<ObjectInfo: '%s'>", PyString_AsString( name ) );
-      Py_DECREF( name );
-    }
-    
-    return reprStr;
+    PyObjectInfo *poi = (PyObjectInfo*) self;
+    Py_XDECREF(poi->mName);
+    Py_XDECREF(poi->mProtocol);
+    Py_XDECREF(poi->mProtocolVersion);
+    Py_XDECREF(poi->mNumComponents);
+    Py_XDECREF(poi->mPad);
+    poi->mInfo = NULL;
+    Py_TYPE(self)->tp_free(self);
 }
 
-// *****************************************************************************
+static PyObject *ObjectInfo_repr( PyObject *self )
+{
+    PyObjectInfo *oi = (PyObjectInfo*) self;
+
+    std::string cname = PyString_AsStdString( oi->mName );
+    return PyString_FromFormat( "<ObjectInfo: '%s'>",  cname.c_str());
+}
+
+static PyObject* ObjectInfo_getName(PyObject *self, void *)
+{
+    PyObjectInfo *oi = (PyObjectInfo*) self;
+    Py_INCREF(oi->mName);
+    return oi->mName;
+}
+
+static PyObject* ObjectInfo_getProtocolName(PyObject *self, void *)
+{
+    PyObjectInfo *oi = (PyObjectInfo*) self;
+    Py_INCREF(oi->mProtocol);
+    return oi->mProtocol;
+}
+
+static PyObject* ObjectInfo_getProtocolVersion(PyObject *self, void *)
+{
+    PyObjectInfo *oi = (PyObjectInfo*) self;
+    Py_INCREF(oi->mProtocolVersion);
+    return oi->mProtocolVersion;
+}
+
+static PyObject* ObjectInfo_getNumComponents(PyObject *self, void *)
+{
+    PyObjectInfo *oi = (PyObjectInfo*) self;
+    Py_INCREF(oi->mNumComponents);
+    return oi->mNumComponents;
+}
+
+static PyObject* ObjectInfo_getPad(PyObject *self, void *)
+{
+    PyObjectInfo *oi = (PyObjectInfo*) self;
+    Py_INCREF(oi->mPad);
+    return oi->mPad;
+}
+
+static PyGetSetDef ObjectInfoGetSet[] =
+{
+    {(char*)"name", ObjectInfo_getName, NULL, NULL, NULL},
+    {(char*)"protocolName", ObjectInfo_getProtocolName, NULL, NULL, NULL},
+    {(char*)"protocolVersion", ObjectInfo_getProtocolVersion, NULL, NULL, NULL},
+    {(char*)"numComponents", ObjectInfo_getNumComponents, NULL, NULL, NULL},
+    {(char*)"pad", ObjectInfo_getPad, NULL, NULL, NULL},
+    {NULL, NULL, NULL, NULL, NULL},
+};
+
+PyTypeObject ObjectInfoType;
+
+bool initObjectInfo(PyObject *module)
+{
+    memset(&ObjectInfoType, 0, sizeof(PyTypeObject));
+
+    INIT_REFCNT(ObjectInfoType);
+    ObjectInfoType.tp_name = (char*) "_gto.ObjectInfo";
+    ObjectInfoType.tp_basicsize = sizeof(PyObjectInfo);
+    ObjectInfoType.tp_flags = Py_TPFLAGS_DEFAULT;
+    ObjectInfoType.tp_new = PyType_GenericNew;
+    ObjectInfoType.tp_init = ObjectInfo_init;
+    ObjectInfoType.tp_dealloc = ObjectInfo_dealloc;
+    ObjectInfoType.tp_getset = ObjectInfoGetSet;
+    ObjectInfoType.tp_repr = ObjectInfo_repr;
+
+    if (PyType_Ready(&ObjectInfoType) < 0)
+    {
+        return false;
+    }
+
+    Py_INCREF(&ObjectInfoType);
+    PyModule_AddObject(module, "ObjectInfo", (PyObject *)&ObjectInfoType);
+
+    return true;
+}
+
 PyObject *newObjectInfo( Gto::Reader *reader, const Gto::Reader::ObjectInfo &oi )
 {
-    PyObject *module = PyImport_AddModule( "_gto" );
-    PyObject *moduleDict = PyModule_GetDict( module );
-            
-    PyObject *classObj = PyDict_GetItemString( moduleDict, "ObjectInfo" );
+    PyObject *self = PyObject_CallObject( (PyObject*) &ObjectInfoType, NULL );
 
-    PyObject *args = Py_BuildValue( "()" ); // Empty tuple
-    PyObject *objInfo = PyInstance_New( classObj, args, NULL );
-    Py_DECREF(args);  
+    PyObjectInfo *poi = (PyObjectInfo*) self;
+
+    Py_DECREF(poi->mName);
+    poi->mName = PyString_FromString( reader->stringFromId( oi.name ).c_str() );
     
-    PyObject *val;
+    Py_DECREF(poi->mProtocol);
+    poi->mProtocol = PyString_FromString( reader->stringFromId( oi.protocolName ).c_str() );
     
-    val = PyString_FromString( reader->stringFromId( oi.name ).c_str() );
-    PyObject_SetAttrString( objInfo, "name", val );
-    Py_DECREF(val);
+    Py_DECREF(poi->mProtocolVersion);
+    poi->mProtocolVersion = PyInt_FromLong( oi.protocolVersion );
     
-    val = PyString_FromString( reader->stringFromId( oi.protocolName ).c_str() );
-    PyObject_SetAttrString( objInfo, "protocolName", val );
-    Py_DECREF(val);
+    Py_DECREF(poi->mNumComponents);
+    poi->mNumComponents = PyInt_FromLong( oi.numComponents );
     
-    val = PyInt_FromLong( oi.protocolVersion );
-    PyObject_SetAttrString( objInfo, "protocolVersion", val );
-    Py_DECREF(val);
-    
-    val = PyInt_FromLong( oi.numComponents );
-    PyObject_SetAttrString( objInfo, "numComponents", val );
-    Py_DECREF(val);
-    
-    val = PyInt_FromLong( oi.pad );
-    PyObject_SetAttrString( objInfo, "pad", val );
-    Py_DECREF(val);
+    Py_DECREF(poi->mPad);
+    poi->mPad = PyInt_FromLong( oi.pad );
     
     // Since Gto::Reader::accessObject() __requires__ that the objectInfo
     // reference given to it be from the reader's cache, not just a copy
     // with the same information, we store it here.
-    val = PyCObject_FromVoidPtr( (void *)&oi, NULL );
-    PyObject_SetAttrString( objInfo, "__objInfoPtr", val );
-    Py_DECREF(val);
+    poi->mInfo = &oi;
     
-    return objInfo;
+    return self;
 }
 
 
@@ -129,82 +180,151 @@ PyObject *newObjectInfo( Gto::Reader *reader, const Gto::Reader::ObjectInfo &oi 
 //          ComponentInfo Class
 // *****************************************************************************
 
-// *****************************************************************************
-// Implements ComponentInfo.__repr__(self)
-PyObject *ComponentInfo_init( PyObject *_self, PyObject *args )
+static int ComponentInfo_init( PyObject *self, PyObject *, PyObject * )
 {
-    Py_INCREF( Py_None );
-    return Py_None;
+    PyComponentInfo *pci = (PyComponentInfo*) self;
+
+    pci->mName = PyString_FromString("");
+    pci->mInterpretation = PyString_FromString("");
+    pci->mFlags = PyInt_FromLong(0);
+    pci->mNumProperties = PyInt_FromLong(0);
+    pci->mPad = PyInt_FromLong(0);
+    pci->mObjInfo = Py_None;
+    Py_INCREF(Py_None);
+    pci->mInfo = NULL;
+    return 0;
 }
 
-// *****************************************************************************
-// Implements ComponentInfo.__repr__(self)
-PyObject *ComponentInfo_repr( PyObject *_self, PyObject *args )
+static void ComponentInfo_dealloc(PyObject* self)
 {
-    PyObject *self;
+    PyComponentInfo *pci = (PyComponentInfo*) self;
 
-    if( ! PyArg_ParseTuple( args, "O", &self ) )
-    {
-        // Invalid parameters, let Python do a stack trace
-        return NULL;
-    }
-    
-    PyObject *reprStr = NULL;
-    PyObject *name = PyObject_GetAttrString( self, "name" );
-    
-    if( name == NULL )
-    {
-        reprStr = PyString_FromString( "<INVALID ComponentInfo object>" );
-    }
-    else
-    {
-        reprStr = PyString_FromFormat( "<ComponentInfo: '%s'>", PyString_AsString( name ) );
-        Py_DECREF( name );
-    }
-    
-    return reprStr;
+    Py_XDECREF(pci->mName);
+    Py_XDECREF(pci->mInterpretation);
+    Py_XDECREF(pci->mFlags);
+    Py_XDECREF(pci->mNumProperties);
+    Py_XDECREF(pci->mPad);
+    Py_XDECREF(pci->mObjInfo);
+    pci->mInfo = NULL;
+    Py_TYPE(self)->tp_free(self);
 }
 
-// *****************************************************************************
+static PyObject *ComponentInfo_repr( PyObject *self )
+{
+    PyComponentInfo *pci = (PyComponentInfo*) self;
+    
+    std::string cname = PyString_AsStdString( pci->mName );
+    return PyString_FromFormat( "<ComponentInfo: '%s'>", cname.c_str() );
+}
+
+static PyObject* ComponentInfo_getName(PyObject *self, void*)
+{
+    PyComponentInfo *pci = (PyComponentInfo*) self;
+    Py_INCREF(pci->mName);
+    return pci->mName;
+}
+
+static PyObject* ComponentInfo_getInterpretation(PyObject *self, void*)
+{
+    PyComponentInfo *pci = (PyComponentInfo*) self;
+    Py_INCREF(pci->mInterpretation);
+    return pci->mInterpretation;
+}
+
+static PyObject* ComponentInfo_getFlags(PyObject *self, void*)
+{
+    PyComponentInfo *pci = (PyComponentInfo*) self;
+    Py_INCREF(pci->mFlags);
+    return pci->mFlags;
+}
+
+static PyObject* ComponentInfo_getPad(PyObject *self, void*)
+{
+    PyComponentInfo *pci = (PyComponentInfo*) self;
+    Py_INCREF(pci->mPad);
+    return pci->mPad;
+}
+
+static PyObject* ComponentInfo_getNumProperties(PyObject *self, void*)
+{
+    PyComponentInfo *pci = (PyComponentInfo*) self;
+    Py_INCREF(pci->mNumProperties);
+    return pci->mNumProperties;
+}
+
+static PyObject* ComponentInfo_getObject(PyObject *self, void*)
+{
+    PyComponentInfo *pci = (PyComponentInfo*) self;
+    Py_INCREF(pci->mObjInfo);
+    return pci->mObjInfo;
+}
+
+static PyGetSetDef ComponentInfoGetSet[] =
+{
+    {(char*)"name", ComponentInfo_getName, NULL, NULL, NULL},
+    {(char*)"interpretation", ComponentInfo_getInterpretation, NULL, NULL, NULL},
+    {(char*)"pad", ComponentInfo_getPad, NULL, NULL, NULL},
+    {(char*)"flags", ComponentInfo_getFlags, NULL, NULL, NULL},
+    {(char*)"numProperties", ComponentInfo_getNumProperties, NULL, NULL, NULL},
+    {(char*)"object", ComponentInfo_getObject, NULL, NULL, NULL},
+    {NULL, NULL, NULL, NULL, NULL},
+};
+
+PyTypeObject ComponentInfoType;
+
+bool initComponentInfo(PyObject *module)
+{
+    memset(&ComponentInfoType, 0, sizeof(PyTypeObject));
+
+    INIT_REFCNT(ComponentInfoType);
+    ComponentInfoType.tp_name = (char*) "_gto.ComponentInfo";
+    ComponentInfoType.tp_basicsize = sizeof(PyComponentInfo);
+    ComponentInfoType.tp_flags = Py_TPFLAGS_DEFAULT;
+    ComponentInfoType.tp_new = PyType_GenericNew;
+    ComponentInfoType.tp_init = ComponentInfo_init;
+    ComponentInfoType.tp_dealloc = ComponentInfo_dealloc;
+    ComponentInfoType.tp_getset = ComponentInfoGetSet;
+    ComponentInfoType.tp_repr = ComponentInfo_repr;
+
+    if (PyType_Ready(&ComponentInfoType) < 0)
+    {
+        return false;
+    }
+
+    Py_INCREF(&ComponentInfoType);
+    PyModule_AddObject(module, "ComponentInfo", (PyObject *)&ComponentInfoType);
+
+    return true;
+}
+
 PyObject *newComponentInfo( Gto::Reader *reader,
                             const Gto::Reader::ComponentInfo &ci )
 {
-    PyObject *module = PyImport_AddModule( "_gto" );
-    PyObject *moduleDict = PyModule_GetDict( module );
-            
-    PyObject *classObj = PyDict_GetItemString( moduleDict, "ComponentInfo" );
+    PyObject *self = PyObject_CallObject( (PyObject*) &ComponentInfoType, NULL );
 
-    PyObject *args = Py_BuildValue( "()" ); // Empty tuple
-    PyObject *compInfo = PyInstance_New( classObj, args, NULL );
-    Py_DECREF(args);  
-    
-    PyObject *val;
-    
-    val = PyString_FromString( reader->stringFromId( ci.name ).c_str() );
-    PyObject_SetAttrString( compInfo, "name", val );
-    Py_DECREF(val);
-    
-    val = PyInt_FromLong( ci.numProperties );
-    PyObject_SetAttrString( compInfo, "numProperties", val );
-    Py_DECREF(val);
-    
-    val = PyInt_FromLong( ci.flags );
-    PyObject_SetAttrString( compInfo, "flags", val );
-    Py_DECREF(val);
-    
-    val = PyString_FromString( reader->stringFromId( ci.interpretation ).c_str() );
-    PyObject_SetAttrString( compInfo, "interpretation", val );
-    Py_DECREF(val);
-    
-    val = PyInt_FromLong( ci.pad );
-    PyObject_SetAttrString( compInfo, "pad", val );
-    Py_DECREF(val);
+    PyComponentInfo *pci = (PyComponentInfo*) self;
 
-    val = newObjectInfo( reader, (*ci.object) );
-    PyObject_SetAttrString( compInfo, "object", val );
-    Py_DECREF(val);
+    Py_DECREF(pci->mName);
+    pci->mName = PyString_FromString( reader->stringFromId( ci.name ).c_str() );
     
-    return compInfo;
+    Py_DECREF(pci->mInterpretation);
+    pci->mInterpretation = PyString_FromString( reader->stringFromId( ci.interpretation ).c_str() );
+    
+    Py_DECREF(pci->mFlags);
+    pci->mFlags = PyInt_FromLong( ci.flags );
+    
+    Py_DECREF(pci->mNumProperties);
+    pci->mNumProperties = PyInt_FromLong( ci.numProperties );
+    
+    Py_DECREF(pci->mPad);
+    pci->mPad = PyInt_FromLong( ci.pad );
+    
+    Py_DECREF(pci->mObjInfo);
+    pci->mObjInfo = newObjectInfo( reader, (*ci.object) );
+
+    pci->mInfo = &ci;
+    
+    return self;
 }
 
 
@@ -212,86 +332,164 @@ PyObject *newComponentInfo( Gto::Reader *reader,
 //          PropertyInfo Class
 // *****************************************************************************
 
-// *****************************************************************************
-// Implements PropertyInfo.__init__(self)
-PyObject *PropertyInfo_init( PyObject *_self, PyObject *args )
+static int PropertyInfo_init( PyObject *self, PyObject *, PyObject * )
 {
-    Py_INCREF( Py_None );
-    return Py_None;
+    PyPropertyInfo *ppi = (PyPropertyInfo*) self;
+
+    ppi->mName = PyString_FromString("");
+    ppi->mInterpretation = PyString_FromString("");
+    ppi->mType = PyInt_FromLong(Gto::ErrorType);
+    ppi->mSize = PyInt_FromLong(0);
+    ppi->mWidth = PyInt_FromLong(0);
+    ppi->mPad = PyInt_FromLong(0);
+    ppi->mCompInfo = Py_None;
+    Py_INCREF(Py_None);
+    ppi->mInfo = NULL;
+    return 0;
 }
 
-// *****************************************************************************
-// Implements PropertyInfo.__repr__(self)
-PyObject *PropertyInfo_repr( PyObject *_self, PyObject *args )
+static void PropertyInfo_dealloc(PyObject *self)
 {
-    PyObject *self;
+    PyPropertyInfo *ppi = (PyPropertyInfo*) self;
 
-    if( ! PyArg_ParseTuple( args, "O", &self ) )
-    {
-        // Invalid parameters, let Python do a stack trace
-        return NULL;
-    }
-    
-    PyObject *reprStr = NULL;
-    PyObject *name = PyObject_GetAttrString( self, "name" );
-    
-    if( name == NULL )
-    {
-        reprStr = PyString_FromString( "<INVALID PropertyInfo object>" );
-    }
-    else
-    {
-        reprStr = PyString_FromFormat( "<PropertyInfo: '%s'>", PyString_AsString( name ) );
-        Py_DECREF(name);
-    }
-    
-    return reprStr;
+    Py_XDECREF(ppi->mName);
+    Py_XDECREF(ppi->mInterpretation);
+    Py_XDECREF(ppi->mType);
+    Py_XDECREF(ppi->mSize);
+    Py_XDECREF(ppi->mWidth);
+    Py_XDECREF(ppi->mPad);
+    Py_XDECREF(ppi->mCompInfo);
+    ppi->mInfo = NULL;
+    Py_TYPE(self)->tp_free(self);
 }
 
-// *****************************************************************************
+static PyObject *PropertyInfo_repr( PyObject *self )
+{
+    PyPropertyInfo *ppi = (PyPropertyInfo*) self;
+
+    std::string cname = PyString_AsStdString( ppi->mName );
+    return PyString_FromFormat( "<PropertyInfo: '%s'>", cname.c_str() );
+}
+
+static PyObject* PropertyInfo_getName(PyObject *self, void*)
+{
+    PyPropertyInfo *ppi = (PyPropertyInfo*) self;
+    Py_INCREF(ppi->mName);
+    return ppi->mName;
+}
+
+static PyObject* PropertyInfo_getInterpretation(PyObject *self, void*)
+{
+    PyPropertyInfo *ppi = (PyPropertyInfo*) self;
+    Py_INCREF(ppi->mInterpretation);
+    return ppi->mInterpretation;
+}
+
+static PyObject* PropertyInfo_getSize(PyObject *self, void*)
+{
+    PyPropertyInfo *ppi = (PyPropertyInfo*) self;
+    Py_INCREF(ppi->mSize);
+    return ppi->mSize;
+}
+
+static PyObject* PropertyInfo_getType(PyObject *self, void*)
+{
+    PyPropertyInfo *ppi = (PyPropertyInfo*) self;
+    Py_INCREF(ppi->mType);
+    return ppi->mType;
+}
+
+static PyObject* PropertyInfo_getWidth(PyObject *self, void*)
+{
+    PyPropertyInfo *ppi = (PyPropertyInfo*) self;
+    Py_INCREF(ppi->mWidth);
+    return ppi->mWidth;
+}
+
+static PyObject* PropertyInfo_getPad(PyObject *self, void*)
+{
+    PyPropertyInfo *ppi = (PyPropertyInfo*) self;
+    Py_INCREF(ppi->mPad);
+    return ppi->mPad;
+}
+
+static PyObject* PropertyInfo_getComponent(PyObject *self, void*)
+{
+    PyPropertyInfo *ppi = (PyPropertyInfo*) self;
+    Py_INCREF(ppi->mCompInfo);
+    return ppi->mCompInfo;
+}
+
+static PyGetSetDef PropertyInfoGetSet[] =
+{
+    {(char*)"name", PropertyInfo_getName, NULL, NULL, NULL},
+    {(char*)"interpretation", PropertyInfo_getInterpretation, NULL, NULL, NULL},
+    {(char*)"pad", PropertyInfo_getPad, NULL, NULL, NULL},
+    {(char*)"size", PropertyInfo_getSize, NULL, NULL, NULL},
+    {(char*)"width", PropertyInfo_getWidth, NULL, NULL, NULL},
+    {(char*)"type", PropertyInfo_getType, NULL, NULL, NULL},
+    {(char*)"component", PropertyInfo_getComponent, NULL, NULL, NULL},
+    {NULL, NULL, NULL, NULL, NULL}
+};
+
+PyTypeObject PropertyInfoType;
+
+bool initPropertyInfo(PyObject *module)
+{
+    memset(&PropertyInfoType, 0, sizeof(PyTypeObject));
+
+    INIT_REFCNT(PropertyInfoType);
+    PropertyInfoType.tp_name = (char*) "_gto.PropertyInfo";
+    PropertyInfoType.tp_basicsize = sizeof(PyPropertyInfo);
+    PropertyInfoType.tp_flags = Py_TPFLAGS_DEFAULT;
+    PropertyInfoType.tp_new = PyType_GenericNew;
+    PropertyInfoType.tp_init = PropertyInfo_init;
+    PropertyInfoType.tp_dealloc = PropertyInfo_dealloc;
+    PropertyInfoType.tp_getset = PropertyInfoGetSet;
+    PropertyInfoType.tp_repr = PropertyInfo_repr;
+
+    if (PyType_Ready(&PropertyInfoType) < 0)
+    {
+        return false;
+    }
+
+    Py_INCREF(&PropertyInfoType);
+    PyModule_AddObject(module, "PropertyInfo", (PyObject *)&PropertyInfoType);
+
+    return true;
+}
+
 PyObject *newPropertyInfo( Gto::Reader *reader,
                            const Gto::Reader::PropertyInfo &pi )
 {
-    PyObject *module = PyImport_AddModule( "_gto" );
-    PyObject *moduleDict = PyModule_GetDict( module );
+    PyObject *self = PyObject_CallObject( (PyObject*) &PropertyInfoType, NULL );
+
+    PyPropertyInfo *ppi = (PyPropertyInfo*) self;
+
+    Py_DECREF(ppi->mName);
+    ppi->mName = PyString_FromString( reader->stringFromId( pi.name ).c_str() );
     
-    PyObject *classObj = PyDict_GetItemString( moduleDict, "PropertyInfo" );
+    Py_DECREF(ppi->mInterpretation);
+    ppi->mInterpretation = PyString_FromString( reader->stringFromId( pi.interpretation ).c_str() );
     
-    PyObject *args = Py_BuildValue( "()" ); // Empty tuple
-    PyObject *propInfo = PyInstance_New( classObj, args, NULL );
-    Py_DECREF(args);
+    Py_DECREF(ppi->mType);
+    ppi->mType = PyInt_FromLong( pi.type );
     
-    PyObject *val;
+    Py_DECREF(ppi->mSize);
+    ppi->mSize = PyInt_FromLong( pi.size );
+
+    Py_DECREF(ppi->mWidth);
+    ppi->mWidth = PyInt_FromLong( pi.width );
     
-    val = PyString_FromString( reader->stringFromId( pi.name ).c_str() );
-    PyObject_SetAttrString( propInfo, "name", val );
-    Py_DECREF(val);
+    Py_DECREF(ppi->mPad);
+    ppi->mPad = PyInt_FromLong( pi.pad );
     
-    val = PyInt_FromLong( pi.size );
-    PyObject_SetAttrString( propInfo, "size", val );
-    Py_DECREF(val);
+    Py_DECREF(ppi->mCompInfo);
+    ppi->mCompInfo = newComponentInfo( reader, (*pi.component) );
+
+    ppi->mInfo = &pi;
     
-    val = PyInt_FromLong( pi.type );
-    PyObject_SetAttrString( propInfo, "type", val );
-    Py_DECREF(val);
-    
-    val = PyInt_FromLong( pi.width );
-    PyObject_SetAttrString( propInfo, "width", val );
-    Py_DECREF(val);
-    
-    val = PyString_FromString( reader->stringFromId( pi.interpretation ).c_str() );
-    PyObject_SetAttrString( propInfo, "interpretation", val );
-    Py_DECREF(val);
-    
-    val = PyInt_FromLong( pi.pad );
-    PyObject_SetAttrString( propInfo, "pad", val );
-    Py_DECREF(val);
-    
-    val = newComponentInfo( reader, (*pi.component) );
-    PyObject_SetAttrString( propInfo, "component", val );
-    Py_DECREF(val);
-    
-    return propInfo;
+    return self;
 }
 
 

@@ -51,8 +51,46 @@
 
 namespace PyGto {
 
-// *****************************************************************************
-// C++ Reader helper function prototypes
+typedef struct
+{
+    PyObject_HEAD
+    PyObject *mName;
+    PyObject *mProtocol;
+    PyObject *mProtocolVersion;
+    PyObject *mNumComponents;
+    PyObject *mPad;
+    const Gto::Reader::ObjectInfo *mInfo;
+} PyObjectInfo;
+
+typedef struct
+{
+    PyObject_HEAD
+    PyObject *mName;
+    PyObject *mNumProperties;
+    PyObject *mFlags;
+    PyObject *mInterpretation;
+    PyObject *mPad;
+    PyObject *mObjInfo;
+    const Gto::Reader::ComponentInfo *mInfo;
+} PyComponentInfo;
+
+typedef struct
+{
+    PyObject_HEAD
+    PyObject *mName;
+    PyObject *mType;
+    PyObject *mSize;
+    PyObject *mWidth;
+    PyObject *mInterpretation;
+    PyObject *mPad;
+    PyObject *mCompInfo;
+    const Gto::Reader::PropertyInfo *mInfo;
+} PyPropertyInfo;
+
+bool initObjectInfo(PyObject *module);
+bool initComponentInfo(PyObject *module);
+bool initPropertyInfo(PyObject *module);
+
 PyObject *newObjectInfo( Gto::Reader *reader, 
                          const Gto::Reader::ObjectInfo &oi );
 
@@ -61,44 +99,6 @@ PyObject *newComponentInfo( Gto::Reader *reader,
 
 PyObject *newPropertyInfo( Gto::Reader *reader, 
                            const Gto::Reader::PropertyInfo &pi );
-
-// *****************************************************************************
-// Python method prototypes
-
-PyObject *ObjectInfo_init( PyObject *_self, PyObject *args );
-PyObject *ObjectInfo_repr( PyObject *_self, PyObject *args );
-PyObject *ComponentInfo_init( PyObject *_self, PyObject *args );
-PyObject *ComponentInfo_repr( PyObject *_self, PyObject *args );
-PyObject *PropertyInfo_init( PyObject *_self, PyObject *args );
-PyObject *PropertyInfo_repr( PyObject *_self, PyObject *args );
-
-// *****************************************************************************
-// Table of methods available in the ObjectInfo class
-static PyMethodDef ObjectInfoMethods[] = 
-{
-    {"__init__", ObjectInfo_init, METH_VARARGS, "class constructor"},
-    {"__repr__", ObjectInfo_repr, METH_VARARGS, NULL },
-    {NULL}
-};
-
-// *****************************************************************************
-// Table of methods available in the ComponentInfo class
-static PyMethodDef ComponentInfoMethods[] = 
-{
-    {"__init__", ComponentInfo_init, METH_VARARGS, "class constructor"},
-    {"__repr__", ComponentInfo_repr, METH_VARARGS, NULL },
-    {NULL}
-};
-
-// *****************************************************************************
-// Table of methods available in the PropertyInfo class
-static PyMethodDef PropertyInfoMethods[] = 
-{
-    {"__init__", PropertyInfo_init, METH_VARARGS, "class constructor"},
-    {"__repr__", PropertyInfo_repr, METH_VARARGS, NULL },
-    {NULL}
-};
-
 
 }  //  End namespace PyGto
 

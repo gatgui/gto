@@ -20,18 +20,18 @@ writer.open( "test.gto" )
 # Declare the data structures -- see the gto file format spec
 writer.beginObject( "test", "data", 1 )
 writer.beginComponent( "component_1" )
-writer.property( "property_1", gto.FLOAT, 4, 4 )
-writer.property( "property_2", gto.INT, 5, 2 )
-writer.property( "property_3", gto.STRING, 1, 4 )
+writer.property( "property_1", gto.Float, 4, 4 )
+writer.property( "property_2", gto.Int, 5, 2 )
+writer.property( "property_3", gto.String, 1, 4 )
 writer.endComponent()
 writer.endObject()
 
 writer.beginObject( "test2", "data", 1 )
 writer.beginComponent( "component_1" )
-writer.property( "property_1", gto.DOUBLE, 10 )
-writer.property( "property_2", gto.FLOAT, 10 )
-writer.property( "property_3", gto.INT, 10 )
-writer.property( "property_4", gto.INT, 2, 3 )
+writer.property( "property_1", gto.Double, 10 )
+writer.property( "property_2", gto.Float, 10 )
+writer.property( "property_3", gto.Int, 10 )
+writer.property( "property_4", gto.Int, 2, 3 )
 writer.endComponent()
 writer.endObject()
 
@@ -113,9 +113,9 @@ class myGtoReader( gto.Reader ):
 
     def component( self, name, interp, cinfo ):
         print "component",name, interp, cinfo.numProperties, "properties",
-        if( cinfo.flags & gto.TRANSPOSED ):
+        if( cinfo.flags & gto.Transposed ):
             print "transposed",
-        if( cinfo.flags & gto.MATRIX ):
+        if( cinfo.flags & gto.Matrix ):
             print "matrix",
         print
         return 1
@@ -133,6 +133,6 @@ class myGtoReader( gto.Reader ):
 
 
 # create an instance of the myGtoReader class
-reader = myGtoReader( gto.Reader.NONE )
+reader = myGtoReader( gto.Reader.None )
 # open the given file and set the wheels in motion...
 reader.open("test.gto")
