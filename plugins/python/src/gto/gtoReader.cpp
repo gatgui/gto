@@ -512,9 +512,10 @@ static PyObject *Reader_fail( PyObject *self, PyObject *args )
 
     PyReader *prdr = (PyReader*) self;
 
-    if ( !prdr->m_reader || !prdr->m_isOpen )
+    if ( !prdr->m_reader ) // || !prdr->m_isOpen )
     {
-      return NULL;
+        PyErr_SetString(gtoError(), "Invalid internal reader");
+        return NULL;
     }
 
     Reader *reader = prdr->m_reader;
@@ -529,9 +530,10 @@ static PyObject *Reader_why( PyObject *self, PyObject * )
 {
     PyReader *prdr = (PyReader*) self;
 
-    if ( !prdr->m_reader || !prdr->m_isOpen )
+    if ( !prdr->m_reader ) //|| !prdr->m_isOpen )
     {
-      return NULL;
+        PyErr_SetString(gtoError(), "Invalid internal reader");
+        return NULL;
     }
 
     Reader *reader = prdr->m_reader;
@@ -545,9 +547,10 @@ static PyObject *Reader_close( PyObject *self, PyObject * )
 {
     PyReader *reader = (PyReader *) self;
     
-    if( reader->m_reader == NULL || reader->m_isOpen == false )
+    if( reader->m_reader == NULL ) //|| reader->m_isOpen == false )
     {
-        PyErr_SetString( gtoError(), "no file is open." );
+        //PyErr_SetString( gtoError(), "no file is open." );
+        PyErr_SetString(gtoError(), "Invalid internal reader");
         return NULL;
     }
 
@@ -635,8 +638,9 @@ static PyObject *Reader_stringFromId( PyObject *self, PyObject *args )
 
     PyReader *prdr = (PyReader*) self;
 
-    if ( !prdr->m_reader || !prdr->m_isOpen )
+    if ( !prdr->m_reader ) //|| !prdr->m_isOpen )
     {
+        PyErr_SetString(gtoError(), "Invalid internal reader");
         return NULL;
     }
     
@@ -652,8 +656,9 @@ static PyObject *Reader_stringTable( PyObject *self, PyObject * )
 {
     PyReader *prdr = (PyReader*) self;
 
-    if ( !prdr->m_reader || !prdr->m_isOpen )
+    if ( !prdr->m_reader ) //|| !prdr->m_isOpen )
     {
+        PyErr_SetString(gtoError(), "Invalid internal reader");
         return NULL;
     }
     
@@ -676,8 +681,9 @@ static PyObject *Reader_isSwapped( PyObject *self, PyObject * )
 {
     PyReader *prdr = (PyReader*) self;
 
-    if ( !prdr->m_reader || !prdr->m_isOpen )
+    if ( !prdr->m_reader ) //|| !prdr->m_isOpen )
     {
+        PyErr_SetString(gtoError(), "Invalid internal reader");
         return NULL;
     }
     
@@ -697,8 +703,9 @@ static PyObject *Reader_objects( PyObject *self, PyObject * )
 {
     PyReader *prdr = (PyReader*) self;
 
-    if ( !prdr->m_reader || !prdr->m_isOpen )
+    if ( !prdr->m_reader ) //|| !prdr->m_isOpen )
     {
+        PyErr_SetString(gtoError(), "Invalid internal reader");
         return NULL;
     }
     
@@ -734,8 +741,15 @@ static PyObject *Reader_accessObject( PyObject *self, PyObject *args )
 
     PyReader *prdr = (PyReader*) self;
 
-    if ( !prdr->m_reader || !prdr->m_isOpen )
+    if ( !prdr->m_reader )
     {
+        PyErr_SetString(gtoError(), "Invalid internal reader");
+        return NULL;
+    }
+    
+    if ( !prdr->m_isOpen )
+    {
+        PyErr_SetString(gtoError(), "No file opened");
         return NULL;
     }
     
@@ -771,8 +785,9 @@ static PyObject *Reader_components( PyObject *self, PyObject * )
 {
     PyReader *prdr = (PyReader*) self;
 
-    if ( !prdr->m_reader || !prdr->m_isOpen )
+    if ( !prdr->m_reader ) //|| !prdr->m_isOpen )
     {
+        PyErr_SetString(gtoError(), "Invalid internal reader");
         return NULL;
     }
     
@@ -808,8 +823,15 @@ static PyObject *Reader_accessComponent( PyObject *self, PyObject *args )
 
     PyReader *prdr = (PyReader*) self;
 
-    if ( !prdr->m_reader || !prdr->m_isOpen )
+    if ( !prdr->m_reader ) //|| !prdr->m_isOpen )
     {
+        PyErr_SetString(gtoError(), "Invalid internal reader");
+        return NULL;
+    }
+    
+    if ( !prdr->m_isOpen )
+    {
+        PyErr_SetString(gtoError(), "No file opened");
         return NULL;
     }
     
@@ -844,8 +866,9 @@ static PyObject *Reader_properties( PyObject *self, PyObject * )
 {
     PyReader *prdr = (PyReader*) self;
 
-    if ( !prdr->m_reader || !prdr->m_isOpen )
+    if ( !prdr->m_reader ) //|| !prdr->m_isOpen )
     {
+        PyErr_SetString(gtoError(), "Invalid internal reader");
         return NULL;
     }
     
@@ -881,8 +904,15 @@ static PyObject *Reader_accessProperty( PyObject *self, PyObject *args )
 
     PyReader *prdr = (PyReader*) self;
 
-    if ( !prdr->m_reader || !prdr->m_isOpen )
+    if ( !prdr->m_reader ) //|| !prdr->m_isOpen )
     {
+        PyErr_SetString(gtoError(), "Invalid internal reader");
+        return NULL;
+    }
+    
+    if ( !prdr->m_isOpen )
+    {
+        PyErr_SetString(gtoError(), "No file opened");
         return NULL;
     }
     
@@ -923,8 +953,9 @@ static PyObject* Reader_objectAt(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    if (!pr->m_reader || !pr->m_isOpen)
+    if (!pr->m_reader ) //|| !pr->m_isOpen)
     {
+        PyErr_SetString(gtoError(), "Invalid internal reader");
         return NULL;
     }
 
@@ -949,8 +980,9 @@ static PyObject* Reader_componentAt(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    if (!pr->m_reader || !pr->m_isOpen)
+    if (!pr->m_reader ) //|| !pr->m_isOpen)
     {
+        PyErr_SetString(gtoError(), "Invalid internal reader");
         return NULL;
     }
 
@@ -975,8 +1007,9 @@ static PyObject* Reader_propertyAt(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    if (!pr->m_reader || !pr->m_isOpen)
+    if (!pr->m_reader ) //|| !pr->m_isOpen)
     {
+        PyErr_SetString(gtoError(), "Invalid internal reader");
         return NULL;
     }
 
@@ -1001,8 +1034,9 @@ static PyObject* Reader_findObject(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    if (!pr->m_reader || !pr->m_isOpen)
+    if (!pr->m_reader ) //|| !pr->m_isOpen)
     {
+        PyErr_SetString(gtoError(), "Invalid internal reader");
         return NULL;
     }
 
@@ -1019,8 +1053,9 @@ static PyObject* Reader_findObjects(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    if (!pr->m_reader || !pr->m_isOpen)
+    if (!pr->m_reader) // || !pr->m_isOpen)
     {
+        PyErr_SetString(gtoError(), "Invalid internal reader");
         return NULL;
     }
 
@@ -1048,8 +1083,9 @@ static PyObject* Reader_findComponent(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    if (!pr->m_reader || !pr->m_isOpen)
+    if (!pr->m_reader) // || !pr->m_isOpen)
     {
+        PyErr_SetString(gtoError(), "Invalid internal reader");
         return NULL;
     }
 
@@ -1090,8 +1126,9 @@ static PyObject* Reader_findComponents(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    if (!pr->m_reader || !pr->m_isOpen)
+    if (!pr->m_reader) // || !pr->m_isOpen)
     {
+        PyErr_SetString(gtoError(), "Invalid internal reader");
         return NULL;
     }
 
@@ -1140,8 +1177,9 @@ static PyObject* Reader_findProperty(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    if (!pr->m_reader || !pr->m_isOpen)
+    if (!pr->m_reader) // || !pr->m_isOpen)
     {
+        PyErr_SetString(gtoError(), "Invalid internal reader");
         return NULL;
     }
 
@@ -1220,8 +1258,9 @@ static PyObject* Reader_findProperties(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    if (!pr->m_reader || !pr->m_isOpen)
+    if (!pr->m_reader) // || !pr->m_isOpen)
     {
+        PyErr_SetString(gtoError(), "Invalid internal reader");
         return NULL;
     }
 

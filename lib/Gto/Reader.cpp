@@ -87,10 +87,16 @@ Reader::~Reader()
 bool
 Reader::open(void const *pData, size_t dataSize, const char *name)
 {
-    if (m_in) return false;
+    //if (m_in) return false;
     if (pData == NULL) return false;
     if (dataSize <= 0) return false;
     if (m_in || m_gzfile) close();
+
+    m_objects.clear();
+    m_components.clear();
+    m_properties.clear();
+    m_strings.clear();
+    m_stringMap.clear();
 
     m_inRAM         = (char*)pData;
     m_inRAMSize     = dataSize;
@@ -122,6 +128,12 @@ Reader::open(istream& i, const char *name, unsigned int ormode)
 {
     if ((m_in && m_in != &i) || m_gzfile) close();
 
+    m_objects.clear();
+    m_components.clear();
+    m_properties.clear();
+    m_strings.clear();
+    m_stringMap.clear();
+
     m_in            = &i;
     m_needsClosing  = false;
     m_inName        = name;
@@ -148,7 +160,14 @@ Reader::open(istream& i, const char *name, unsigned int ormode)
 bool
 Reader::open(const char *filename)
 {
-    if (m_in) return false;
+    //if (m_in) return false;
+    if (m_in || m_gzfile) close();
+    
+    m_objects.clear();
+    m_components.clear();
+    m_properties.clear();
+    m_strings.clear();
+    m_stringMap.clear();
     
     struct stat buf;
     if (stat( filename, &buf ) )
@@ -254,11 +273,11 @@ Reader::close()
     //  class is used for another file.
     //
 
-    m_objects.clear();
-    m_components.clear();
-    m_properties.clear();
-    m_strings.clear();
-    m_stringMap.clear();
+    //m_objects.clear();
+    //m_components.clear();
+    //m_properties.clear();
+    //m_strings.clear();
+    //m_stringMap.clear();
     m_buffer.clear();
 
     m_error        = false;
