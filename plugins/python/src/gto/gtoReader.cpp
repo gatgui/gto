@@ -893,7 +893,7 @@ static PyObject *Reader_accessProperty( PyObject *self, PyObject *args )
 
     if (!PyObject_TypeCheck(propInfo, &PropertyInfoType))
     {
-        PyErr_SetString( gtoError(), "accessProperty requires a ComponentInfo instance" );
+        PyErr_SetString( gtoError(), "accessProperty requires a PropertyInfo instance" );
         return NULL;
     }
 
@@ -931,6 +931,463 @@ static PyObject *Reader_accessProperty( PyObject *self, PyObject *args )
     }
 }
 
+static PyObject* Reader_objectAt(PyObject *self, PyObject *args)
+{
+    PyReader *pr = (PyReader*) self;
+    int idx = -1;
+
+    if (!PyArg_ParseTuple(args, "i:_gto.Reader.objectAt", &idx))
+    {
+        return NULL;
+    }
+
+    if (!pr->m_reader || !pr->m_isOpen)
+    {
+        return NULL;
+    }
+
+    Gto::Reader::Objects &objects = pr->m_reader->objects();
+
+    if (idx < 0 || size_t(idx) >= objects.size())
+    {
+        PyErr_SetString(gtoError(), "invalid object index.");
+        return NULL;
+    }
+
+    return newObjectInfo(pr->m_reader, objects[idx]);
+}
+
+static PyObject* Reader_componentAt(PyObject *self, PyObject *args)
+{
+    PyReader *pr = (PyReader*) self;
+    int idx = -1;
+
+    if (!PyArg_ParseTuple(args, "i:_gto.Reader.componentAt", &idx))
+    {
+        return NULL;
+    }
+
+    if (!pr->m_reader || !pr->m_isOpen)
+    {
+        return NULL;
+    }
+
+    Gto::Reader::Components &comps = pr->m_reader->components();
+
+    if (idx < 0 || size_t(idx) >= comps.size())
+    {
+        PyErr_SetString(gtoError(), "invalid component index.");
+        return NULL;
+    }
+
+    return newComponentInfo(pr->m_reader, comps[idx]);
+}
+
+static PyObject* Reader_propertyAt(PyObject *self, PyObject *args)
+{
+    PyReader *pr = (PyReader*) self;
+    int idx = -1;
+
+    if (!PyArg_ParseTuple(args, "i:_gto.Reader.propertyAt", &idx))
+    {
+        return NULL;
+    }
+
+    if (!pr->m_reader || !pr->m_isOpen)
+    {
+        return NULL;
+    }
+
+    Gto::Reader::Properties &props = pr->m_reader->properties();
+
+    if (idx < 0 || size_t(idx) >= props.size())
+    {
+        PyErr_SetString(gtoError(), "invalid property index.");
+        return NULL;
+    }
+
+    return newPropertyInfo(pr->m_reader, props[idx]);
+}
+
+static PyObject* Reader_findObject(PyObject *self, PyObject *args)
+{
+    PyReader *pr = (PyReader*) self;
+    char *oname;
+
+    if (!PyArg_ParseTuple(args, "s:_gto.Reader.findObject", &oname))
+    {
+        return NULL;
+    }
+
+    if (!pr->m_reader || !pr->m_isOpen)
+    {
+        return NULL;
+    }
+
+    return PyInt_FromLong(pr->m_reader->findObject(oname));
+}
+
+static PyObject* Reader_findObjects(PyObject *self, PyObject *args)
+{
+    PyReader *pr = (PyReader*) self;
+    char *pat;
+
+    if (!PyArg_ParseTuple(args, "s:_gto.Reader.findObjects", &pat))
+    {
+        return NULL;
+    }
+
+    if (!pr->m_reader || !pr->m_isOpen)
+    {
+        return NULL;
+    }
+
+    std::vector<std::string> names;
+
+    size_t cnt = pr->m_reader->findObjects(pat, names);
+
+    PyObject *rv = PyList_New(cnt);
+    for (size_t i=0; i<cnt; ++i)
+    {
+        PyList_SetItem(rv, i, PyString_FromString(names[i].c_str()));
+    }
+
+    return rv;
+}
+
+static PyObject* Reader_findComponent(PyObject *self, PyObject *args)
+{
+    PyReader *pr = (PyReader*) self;
+    PyObject *obj = 0;
+    char *cname;
+
+    if (!PyArg_ParseTuple(args, "Os:_gto.Reader.findComponent", &obj, &cname))
+    {
+        return NULL;
+    }
+
+    if (!pr->m_reader || !pr->m_isOpen)
+    {
+        return NULL;
+    }
+
+    int rv = -1;
+
+    if (PyString_Check(obj))
+    {
+        rv = pr->m_reader->findComponent(PyString_AsStdString(obj), cname);
+    }
+    else if (PyObject_TypeCheck(obj, &ObjectInfoType))
+    {
+        PyObjectInfo *poi = (PyObjectInfo*) obj;
+        if (!poi->mInfo)
+        {
+            PyErr_SetString(gtoError(), "_gto.Reader.findComponent: invalid ObjectInfo instance");
+            return NULL;
+        }
+        Gto::Reader::ObjectInfo &oi = *((Gto::Reader::ObjectInfo*) poi->mInfo);
+        rv = pr->m_reader->findComponent(oi, cname);
+    }
+    else
+    {
+        PyErr_SetString(gtoError(), "_gto.Reader.findComponent: first argument must be a string or a ObjectInfo instance");
+        return NULL;
+    }
+
+    return PyInt_FromLong(rv);
+}
+
+static PyObject* Reader_findComponents(PyObject *self, PyObject *args)
+{
+    PyReader *pr = (PyReader*) self;
+    PyObject *obj = 0;
+    char *pat;
+
+    if (!PyArg_ParseTuple(args, "Os:_gto.Reader.findComponents", &obj, &pat))
+    {
+        return NULL;
+    }
+
+    if (!pr->m_reader || !pr->m_isOpen)
+    {
+        return NULL;
+    }
+
+    size_t cnt = 0;
+    std::vector<std::string> names;
+
+    if (PyString_Check(obj))
+    {
+        cnt = pr->m_reader->findComponents(PyString_AsStdString(obj), pat, names);
+    }
+    else if (PyObject_TypeCheck(obj, &ObjectInfoType))
+    {
+        PyObjectInfo *poi = (PyObjectInfo*) obj;
+        if (!poi->mInfo)
+        {
+            PyErr_SetString(gtoError(), "_gto.Reader.findComponents: invalid ObjectInfo instance");
+            return NULL;
+        }
+        Gto::Reader::ObjectInfo &oi = *((Gto::Reader::ObjectInfo*) poi->mInfo);
+        cnt = pr->m_reader->findComponents(oi, pat, names);
+    }
+    else
+    {
+        PyErr_SetString(gtoError(), "_gto.Reader.findComponents: first argument must be a string or a ObjectInfo instance");
+        return NULL;
+    }
+
+    PyObject *rv = PyList_New(cnt);
+    for (size_t i=0; i<cnt; ++i)
+    {
+        PyList_SetItem(rv, i, PyString_FromString(names[i].c_str()));
+    }
+
+    return rv;
+}
+
+static PyObject* Reader_findProperty(PyObject *self, PyObject *args)
+{
+    PyReader *pr = (PyReader*) self;
+    PyObject *arg1 = 0;
+    PyObject *arg2 = 0;
+    PyObject *arg3 = 0;
+
+    if (!PyArg_ParseTuple(args, "OO|O:_gto.Reader.findProperty", &arg1, &arg2, &arg3))
+    {
+        return NULL;
+    }
+
+    if (!pr->m_reader || !pr->m_isOpen)
+    {
+        return NULL;
+    }
+
+    int rv = -1;
+
+    if (arg3 == 0)
+    {
+        // ComponentInfo + name pattern
+        if (!PyObject_TypeCheck(arg1, &ComponentInfoType))
+        {
+            PyErr_SetString(gtoError(), "_gto.Reader.findProperty: first argument out of two must be a ComponentInfo instance");
+            return NULL;
+        }
+        if (!PyString_Check(arg2))
+        {
+            PyErr_SetString(gtoError(), "_gto.Reader.findProperty: last argument must be a string");
+            return NULL;
+        }
+        PyComponentInfo *pci = (PyComponentInfo*) arg1;
+        if (!pci->mInfo)
+        {
+            PyErr_SetString(gtoError(), "_gto.Reader.findProperty: invalid ComponentInfo");
+            return NULL;
+        }
+        Gto::Reader::ComponentInfo &ci = *((Gto::Reader::ComponentInfo*) pci->mInfo);
+        rv = pr->m_reader->findProperty(ci, PyString_AsStdString(arg2));
+    }
+    else
+    {
+        if (!PyString_Check(arg2))
+        {
+            PyErr_SetString(gtoError(), "_gto.Reader.findProperty: second argument out of three must be a string");
+            return NULL;
+        }
+
+        if (!PyString_Check(arg3))
+        {
+            PyErr_SetString(gtoError(), "_gto.Reader.findProperty: last argument must be a string");
+            return NULL;
+        }
+
+        if (PyString_Check(arg1))
+        {
+            rv = pr->m_reader->findProperty(PyString_AsStdString(arg1), PyString_AsStdString(arg2), PyString_AsStdString(arg3));
+        }
+        else if (PyObject_TypeCheck(arg1, &ObjectInfoType))
+        {
+            PyObjectInfo *poi = (PyObjectInfo*) arg1;
+            if (!poi->mInfo)
+            {
+                PyErr_SetString(gtoError(), "_gto.Reader.findProperty: invalid ObjectInfo instance");
+                return NULL;
+            }
+            Gto::Reader::ObjectInfo &oi = *((Gto::Reader::ObjectInfo*) poi->mInfo);
+            rv = pr->m_reader->findProperty(oi, PyString_AsStdString(arg2), PyString_AsStdString(arg3));
+        }
+        else
+        {
+            PyErr_SetString(gtoError(), "_gto.Reader.findProperty: first argument out of three must be a string or a ObjectInfo instance");
+            return NULL;
+        }
+    }
+
+    return PyInt_FromLong(rv);
+}
+
+static PyObject* Reader_findProperties(PyObject *self, PyObject *args)
+{
+    PyReader *pr = (PyReader*) self;
+    PyObject *arg1 = 0;
+    PyObject *arg2 = 0;
+    PyObject *arg3 = 0;
+
+    if (!PyArg_ParseTuple(args, "OO|O:_gto.Reader.findProperties", &arg1, &arg2, &arg3))
+    {
+        return NULL;
+    }
+
+    if (!pr->m_reader || !pr->m_isOpen)
+    {
+        return NULL;
+    }
+
+    size_t cnt = 0;
+    std::vector<std::string> names;
+
+    if (arg3 == 0)
+    {
+        // ComponentInfo + name pattern
+        if (!PyObject_TypeCheck(arg1, &ComponentInfoType))
+        {
+            PyErr_SetString(gtoError(), "_gto.Reader.findProperties: first argument out of two must be a ComponentInfo instance");
+            return NULL;
+        }
+        if (!PyString_Check(arg2))
+        {
+            PyErr_SetString(gtoError(), "_gto.Reader.findProperties: last argument must be a string");
+            return NULL;
+        }
+        PyComponentInfo *pci = (PyComponentInfo*) arg1;
+        if (!pci->mInfo)
+        {
+            PyErr_SetString(gtoError(), "_gto.Reader.findProperties: invalid ComponentInfo");
+            return NULL;
+        }
+        Gto::Reader::ComponentInfo &ci = *((Gto::Reader::ComponentInfo*) pci->mInfo);
+        cnt = pr->m_reader->findProperties(ci, PyString_AsStdString(arg2), names);
+    }
+    else
+    {
+        if (!PyString_Check(arg2))
+        {
+            PyErr_SetString(gtoError(), "_gto.Reader.findProperties: second argument out of three must be a string");
+            return NULL;
+        }
+
+        if (!PyString_Check(arg3))
+        {
+            PyErr_SetString(gtoError(), "_gto.Reader.findProperties: last argument must be a string");
+            return NULL;
+        }
+
+        if (PyString_Check(arg1))
+        {
+            cnt = pr->m_reader->findProperties(PyString_AsStdString(arg1), PyString_AsStdString(arg2), PyString_AsStdString(arg3), names);
+        }
+        else if (PyObject_TypeCheck(arg1, &ObjectInfoType))
+        {
+            PyObjectInfo *poi = (PyObjectInfo*) arg1;
+            if (!poi->mInfo)
+            {
+                PyErr_SetString(gtoError(), "_gto.Reader.findProperties: invalid ObjectInfo instance");
+                return NULL;
+            }
+            Gto::Reader::ObjectInfo &oi = *((Gto::Reader::ObjectInfo*) poi->mInfo);
+            cnt = pr->m_reader->findProperties(oi, PyString_AsStdString(arg2), PyString_AsStdString(arg3), names);
+        }
+        else
+        {
+            PyErr_SetString(gtoError(), "_gto.Reader.findProperties: first argument out of three must be a string or a ObjectInfo instance");
+            return NULL;
+        }
+    }
+
+    PyObject *rv = PyList_New(cnt);
+    for (size_t i=0; i<cnt; ++i)
+    {
+        PyList_SetItem(rv, i, PyString_FromString(names[i].c_str()));
+    }
+
+    return rv;
+}
+
+static PyObject* Reader_getObject(PyObject *self, PyObject *args)
+{
+    PyObject *rv = Reader_findObject(self, args);
+    if (rv != NULL)
+    {
+        int idx = PyInt_AsLong(rv);
+        Py_DECREF(rv);
+
+        if (idx != -1)
+        {
+            PyReader *pr = (PyReader*) self;
+            rv = newObjectInfo(pr->m_reader, pr->m_reader->objectAt(idx));
+        }
+        else
+        {
+            rv = Py_None;
+            Py_INCREF(Py_None);
+        }
+    }
+    return rv;
+}
+
+static PyObject* Reader_getComponent(PyObject *self, PyObject *args)
+{
+    PyObject *rv = Reader_findComponent(self, args);
+    if (rv != NULL)
+    {
+        int idx = PyInt_AsLong(rv);
+        Py_DECREF(rv);
+
+        if (idx != -1)
+        {
+            PyReader *pr = (PyReader*) self;
+            rv = newComponentInfo(pr->m_reader, pr->m_reader->componentAt(idx));
+        }
+        else
+        {
+            rv = Py_None;
+            Py_INCREF(Py_None);
+        }
+    }
+    return rv;
+}
+
+static PyObject* Reader_getProperty(PyObject *self, PyObject *args)
+{
+    PyObject *rv = Reader_findProperty(self, args);
+    if (rv != NULL)
+    {
+        int idx = PyInt_AsLong(rv);
+        Py_DECREF(rv);
+
+        if (idx != -1)
+        {
+            PyReader *pr = (PyReader*) self;
+            rv = newPropertyInfo(pr->m_reader, pr->m_reader->propertyAt(idx));
+        }
+        else
+        {
+            rv = Py_None;
+            Py_INCREF(Py_None);
+        }
+    }
+    return rv;
+}
+
+/*
+size_t findObjects(const std::string &pattern, std::vector<std::string> &names) const;
+size_t findComponents(const ObjectInfo &o, const std::string &pattern, std::vector<std::string> &names) const;
+size_t findComponents(const std::string &o, const std::string &pattern, std::vector<std::string> &names) const;
+size_t findProperties(const ComponentInfo &c, const std::string &pattern, std::vector<std::string> &names) const;
+size_t findProperties(const ObjectInfo &o, const std::string &c, const std::string &pattern, std::vector<std::string> &names) const;
+size_t findProperties(const std::string &o, const std::string &c, const std::string &pattern, std::vector<std::string> &names) const;
+*/
+
 static PyMethodDef ReaderMethods[] = 
 {
     {"open", Reader_open, METH_VARARGS, "open( string filename )"},
@@ -950,6 +1407,18 @@ static PyMethodDef ReaderMethods[] =
     {"accessComponent", Reader_accessComponent, METH_VARARGS, "accessComponent( componentInfo )"},
     {"properties", Reader_properties, METH_VARARGS, "properties()"},
     {"accessProperty", Reader_accessProperty, METH_VARARGS, "accessProperty( propertyInfo )"},
+    {"objectAt", Reader_objectAt, METH_VARARGS, "objectAt( objectIndex )"},
+    {"componentAt", Reader_componentAt, METH_VARARGS, "componentAt( objectIndex )"},
+    {"propertyAt", Reader_propertyAt, METH_VARARGS, "propertyAt( objectIndex )"},
+    {"findObject", Reader_findObject, METH_VARARGS, "findObject( name )"},
+    {"findComponent", Reader_findComponent, METH_VARARGS, "findComponent( (objInfo | objName), name )"},
+    {"findProperty", Reader_findProperty, METH_VARARGS, "findProperty( (((objInfo | objName), compName) | compInfo), name )"},
+    {"findObjects", Reader_findObjects, METH_VARARGS, "findObjects( pattern )"},
+    {"findComponents", Reader_findComponents, METH_VARARGS, "findComponents( (objInfo | objName), pattern )"},
+    {"findProperties", Reader_findProperties, METH_VARARGS, "findProperties( (((objInfo | objName), compName) | compInfo), pattern )"},
+    {"getObject", Reader_getObject, METH_VARARGS, "getObject( name )"},
+    {"getComponent", Reader_getComponent, METH_VARARGS, "getComponent( (objInfo | objName), name )"},
+    {"getProperty", Reader_getProperty, METH_VARARGS, "getProperty( (((objInfo | objName), compName) | compInfo), name )"},
     {NULL, NULL, 0, NULL}
 };
 

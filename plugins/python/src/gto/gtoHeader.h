@@ -59,6 +59,7 @@ typedef struct
     PyObject *mProtocolVersion;
     PyObject *mNumComponents;
     PyObject *mPad;
+    PyObject *mComponentsOffset;
     const Gto::Reader::ObjectInfo *mInfo;
 } PyObjectInfo;
 
@@ -71,6 +72,7 @@ typedef struct
     PyObject *mInterpretation;
     PyObject *mPad;
     PyObject *mObjInfo;
+    PyObject *mPropertiesOffset;
     const Gto::Reader::ComponentInfo *mInfo;
 } PyComponentInfo;
 
@@ -84,6 +86,8 @@ typedef struct
     PyObject *mInterpretation;
     PyObject *mPad;
     PyObject *mCompInfo;
+    PyObject *mOffset;
+    PyObject *mIndex;
     const Gto::Reader::PropertyInfo *mInfo;
 } PyPropertyInfo;
 

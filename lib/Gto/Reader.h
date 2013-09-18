@@ -80,11 +80,12 @@ public:
     {
         void*               objectData; // whatever was returned from object()
 
-        int componentOffset() const { return coffset; }
+        inline int componentOffset() const { return coffset; }
 
     private:
         int                 coffset;
         bool                requested;
+        bool                queried;
         friend class Reader;
     };
 
@@ -93,11 +94,12 @@ public:
         void*               componentData; // return value of component()
         const ObjectInfo*   object;
 
-        int propertyOffset() const { return poffset; }
+        inline int propertyOffset() const { return poffset; }
 
     private:
         int                 poffset;
         bool                requested;
+        bool                queried;
         friend class Reader;
     };
 
@@ -108,9 +110,12 @@ public:
 
         const ComponentInfo* component;
 
+        inline size_t propertyIndex() const { return index; }
+
     private:
         bool                 requested;
         size_t               index;
+        bool                 queried;
         friend class Reader;
     };
 
@@ -183,22 +188,23 @@ public:
     //
     void                fail( std::string why = "" );
 
-    const std::string&  why() const { return m_why; }
+    inline const std::string&  why() const { return m_why; }
 
     const std::string&  stringFromId(unsigned int i);
-    const StringTable&  stringTable() { return m_strings; }
+    const std::string&  stringFromId(unsigned int i) const;
+    inline const StringTable&  stringTable() { return m_strings; }
 
-    bool                isSwapped() const { return m_swapped; }
-    bool                hasIndex() const { return !m_dataOffsets.empty(); }
-    unsigned int        readMode() const { return m_mode; }
+    inline bool                isSwapped() const { return m_swapped; }
+    inline bool                hasIndex() const { return !m_dataOffsets.empty(); }
+    inline unsigned int        readMode() const { return m_mode; }
 
-    const std::string&  infileName() const { return m_inName; }
+    inline const std::string&  infileName() const { return m_inName; }
 
-    std::istream*       in() const { return m_in; }
-    int                 linenum() const { return m_linenum; }
-    int                 charnum() const { return m_charnum; }
+    inline std::istream*       in() const { return m_in; }
+    inline int                 linenum() const { return m_linenum; }
+    inline int                 charnum() const { return m_charnum; }
 
-    Header&             fileHeader() { return m_header; }
+    inline Header&             fileHeader() { return m_header; }
 
     //
     //  This function is called right after the file header is read. 
@@ -227,14 +233,99 @@ public:
     //  easy to take parts for later retrieval with accessObject()
     //
 
-    Objects&            objects() { return m_objects; }
+    inline Objects&     objects() { return m_objects; }
     bool                accessObject(ObjectInfo&);
 
-    Components&         components() { return m_components; }
+    inline Components&  components() { return m_components; }
     bool                accessComponent(ComponentInfo&);
 
-    Properties&         properties() { return m_properties; }
+    inline Properties&  properties() { return m_properties; }
     bool                accessProperty(PropertyInfo&);
+
+
+    inline const ObjectInfo& objectAt(int i) const { return m_objects[i]; }
+    inline const ComponentInfo& componentAt(int i) const { return m_components[i]; }
+    inline const PropertyInfo& propertyAt(int i) const { return m_properties[i]; }
+
+    inline ObjectInfo& objectAt(int i) { return m_objects[i]; }
+    inline ComponentInfo& componentAt(int i) { return m_components[i]; }
+    inline PropertyInfo& propertyAt(int i) { return m_properties[i]; }
+
+    int findObject(const std::string &name) const;
+    int findComponent(const ObjectInfo &o, const std::string &name) const;
+    int findComponent(const std::string &oname, const std::string &cname) const;
+    int findProperty(const ComponentInfo &c, const std::string &name) const;
+    int findProperty(const ObjectInfo &o, const std::string &cname, const std::string &pname) const;
+    int findProperty(const std::string &oname, const std::string &cname, const std::string &pname) const;
+
+    size_t findObjects(const std::string &pattern, std::vector<std::string> &names) const;
+    size_t findComponents(const ObjectInfo &o, const std::string &pattern, std::vector<std::string> &names) const;
+    size_t findComponents(const std::string &o, const std::string &pattern, std::vector<std::string> &names) const;
+    size_t findProperties(const ComponentInfo &c, const std::string &pattern, std::vector<std::string> &names) const;
+    size_t findProperties(const ObjectInfo &o, const std::string &c, const std::string &pattern, std::vector<std::string> &names) const;
+    size_t findProperties(const std::string &o, const std::string &c, const std::string &pattern, std::vector<std::string> &names) const;
+
+    inline const ObjectInfo* getObject(const std::string &name) const
+    {
+        int idx = findObject(name);
+        return (idx != -1 ? &(m_objects[idx]) : NULL);
+    }
+    inline const ComponentInfo* getComponent(const ObjectInfo &o, const std::string &name) const
+    {
+        int idx = findComponent(o, name);
+        return (idx != -1 ? &(m_components[idx]) : NULL);
+    }
+    inline const ComponentInfo* getComponent(const std::string &oname, const std::string &cname) const
+    {
+        int idx = findComponent(oname, cname);
+        return (idx != -1 ? &(m_components[idx]) : NULL);
+    }
+    inline const PropertyInfo* getProperty(const ComponentInfo &c, const std::string &name) const
+    {
+        int idx = findProperty(c, name);
+        return (idx != -1 ? &(m_properties[idx]) : NULL);
+    }
+    inline const PropertyInfo* getProperty(const ObjectInfo &o, const std::string &cname, const std::string &pname) const
+    {
+        int idx = findProperty(o, cname, pname);
+        return (idx != -1 ? &(m_properties[idx]) : NULL);
+    }
+    inline const PropertyInfo* getProperty(const std::string &oname, const std::string &cname, const std::string &pname) const
+    {
+        int idx = findProperty(oname, cname, pname);
+        return (idx != -1 ? &(m_properties[idx]) : NULL);
+    }
+
+    inline ObjectInfo* getObject(const std::string &name)
+    {
+        int idx = findObject(name);
+        return (idx != -1 ? &(m_objects[idx]) : NULL);
+    }
+    inline ComponentInfo* getComponent(const ObjectInfo &o, const std::string &name)
+    {
+        int idx = findComponent(o, name);
+        return (idx != -1 ? &(m_components[idx]) : NULL);
+    }
+    inline ComponentInfo* getComponent(const std::string &oname, const std::string &cname)
+    {
+        int idx = findComponent(oname, cname);
+        return (idx != -1 ? &(m_components[idx]) : NULL);
+    }
+    inline PropertyInfo* getProperty(const ComponentInfo &c, const std::string &name)
+    {
+        int idx = findProperty(c, name);
+        return (idx != -1 ? &(m_properties[idx]) : NULL);
+    }
+    inline PropertyInfo* getProperty(const ObjectInfo &o, const std::string &cname, const std::string &pname)
+    {
+        int idx = findProperty(o, cname, pname);
+        return (idx != -1 ? &(m_properties[idx]) : NULL);
+    }
+    inline PropertyInfo* getProperty(const std::string &oname, const std::string &cname, const std::string &pname)
+    {
+        int idx = findProperty(oname, cname, pname);
+        return (idx != -1 ? &(m_properties[idx]) : NULL);
+    }
 
     //
     //  These are used to declare a component or property. The
@@ -246,13 +337,13 @@ public:
 
     struct GTO_API Request
     {
-        Request()
+        inline Request()
             : m_want(true), m_data(0) {}
-        Request(bool want, void* data = 0)
+        inline Request(bool want, void* data = 0)
             : m_want(want), m_data(data) {}
 
-        bool  want() const { return m_want; }
-        void* data() const { return m_data; }
+        inline bool  want() const { return m_want; }
+        inline void* data() const { return m_data; }
 
     private:
         bool        m_want;
@@ -344,7 +435,7 @@ public:
     void                addObject(const ObjectInfo&);
     void                addComponent(const ComponentInfo&);
 
-    const TypeSpec&     currentType() const { return m_currentType; }
+    inline const TypeSpec& currentType() const { return m_currentType; }
 
     template <typename T>
     void                addToPropertyBuffer(T);
@@ -364,6 +455,8 @@ protected:
     //
 
     virtual bool        readProperty(PropertyInfo&);
+    bool                accessObjectOnly(ObjectInfo&);
+    bool                accessComponentOnly(ComponentInfo&);
 
 private:
     bool                readBinaryGTO();
