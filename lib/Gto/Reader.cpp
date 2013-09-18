@@ -676,8 +676,9 @@ Reader::findObjects(const std::string &pattern, std::vector<std::string> &names)
         while (oit != m_objects.end())
         {
             std::string oname = stringFromId(oit->name);
-            int len = int(oname.length());
-            if (re_search(&e, oname.c_str(), len, 0, len, NULL) >= 0)
+            //int len = int(oname.length());
+            //if (re_search(&e, oname.c_str(), len, 0, len, NULL) >= 0)
+            if (regexec(&e, oname.c_str(), 0, 0, 0) == 0)
             {
                 names.push_back(oname);
             }
@@ -703,8 +704,9 @@ Reader::findComponents(const ObjectInfo &o, const std::string &pattern, std::vec
         while (cit != m_components.end())
         {
             std::string cname = stringFromId(cit->name);
-            int len = int(cname.length());
-            if (re_search(&e, cname.c_str(), len, 0, len, NULL) >= 0)
+            //int len = int(cname.length());
+            //if (re_search(&e, cname.c_str(), len, 0, len, NULL) >= 0)
+            if (regexec(&e, cname.c_str(), 0, 0, 0) == 0)
             {
                 names.push_back(cname);
             }
@@ -745,8 +747,9 @@ Reader::findProperties(const ComponentInfo &c, const std::string &pattern, std::
         while (pit != m_properties.end())
         {
             std::string pname = stringFromId(pit->name);
-            int len = int(pname.length());
-            if (re_search(&e, pname.c_str(), len, 0, len, NULL) >= 0)
+            //int len = int(pname.length());
+            //if (re_search(&e, pname.c_str(), len, 0, len, NULL) >= 0)
+            if (regexec(&e, pname.c_str(), 0, 0, 0) == 0)
             {
                 names.push_back(pname);
             }
