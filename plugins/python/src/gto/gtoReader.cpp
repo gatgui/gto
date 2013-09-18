@@ -704,12 +704,6 @@ static PyObject *Reader_objects( PyObject *self, PyObject * )
     
     Reader *reader = prdr->m_reader;
 
-    if( reader->readMode() != Gto::Reader::RandomAccess )
-    {
-        PyErr_SetString( gtoError(), "file was not opened for random access." );
-        return NULL;
-    }
-    
     Gto::Reader::Objects &objects = reader->objects();
     
     PyObject *objectsTuple = PyTuple_New( objects.size() );
@@ -747,7 +741,7 @@ static PyObject *Reader_accessObject( PyObject *self, PyObject *args )
     
     Reader *reader = prdr->m_reader;
     
-    if( reader->readMode() != Gto::Reader::RandomAccess )
+    if( ( reader->readMode() & Gto::Reader::RandomAccess ) == 0 )
     {
         PyErr_SetString( gtoError(), "file was not opened for random access." );
         return NULL;
@@ -783,12 +777,6 @@ static PyObject *Reader_components( PyObject *self, PyObject * )
     }
     
     Reader *reader = prdr->m_reader;
-    
-    if( reader->readMode() != Gto::Reader::RandomAccess )
-    {
-        PyErr_SetString( gtoError(), "file was not opened for random access." );
-        return NULL;
-    }
     
     Gto::Reader::Components &components = reader->components();
     
@@ -827,7 +815,7 @@ static PyObject *Reader_accessComponent( PyObject *self, PyObject *args )
     
     Reader *reader = prdr->m_reader;
     
-    if( reader->readMode() != Gto::Reader::RandomAccess )
+    if( ( reader->readMode() & Gto::Reader::RandomAccess ) == 0 )
     {
         PyErr_SetString( gtoError(), "file was not opened for random access." );
         return NULL;
@@ -862,12 +850,6 @@ static PyObject *Reader_properties( PyObject *self, PyObject * )
     }
     
     Reader *reader = prdr->m_reader;
-    
-    if( reader->readMode() != Gto::Reader::RandomAccess )
-    {
-        PyErr_SetString( gtoError(), "file was not opened for random access." );
-        return NULL;
-    }
     
     Gto::Reader::Properties &properties = reader->properties();
     
@@ -906,7 +888,7 @@ static PyObject *Reader_accessProperty( PyObject *self, PyObject *args )
     
     Reader *reader = prdr->m_reader;
     
-    if( reader->readMode() != Gto::Reader::RandomAccess )
+    if( ( reader->readMode() & Gto::Reader::RandomAccess ) == 0 )
     {
         PyErr_SetString( gtoError(), "file was not opened for random access." );
         return NULL;

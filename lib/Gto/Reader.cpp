@@ -916,7 +916,7 @@ Reader::readBinaryGTO()
     readProperties();       if (m_error) return false;
     descriptionComplete();
 
-    if (m_mode & HeaderOnly)
+    if (m_mode & (HeaderOnly | RandomAccess))
     {
         return true;
     }
