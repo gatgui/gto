@@ -87,7 +87,6 @@ typedef struct
     PyObject *mPad;
     PyObject *mCompInfo;
     PyObject *mOffset;
-    PyObject *mIndex;
     const Gto::Reader::PropertyInfo *mInfo;
 } PyPropertyInfo;
 

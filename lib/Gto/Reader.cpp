@@ -82,6 +82,17 @@ Reader::Reader(unsigned int mode)
 Reader::~Reader()
 {
     close();
+    clearInfo();
+}
+
+void
+Reader::clearInfo()
+{
+    m_objects.clear();
+    m_components.clear();
+    m_properties.clear();
+    m_strings.clear();
+    m_stringMap.clear();
 }
 
 bool
@@ -92,11 +103,7 @@ Reader::open(void const *pData, size_t dataSize, const char *name)
     if (dataSize <= 0) return false;
     if (m_in || m_gzfile) close();
 
-    m_objects.clear();
-    m_components.clear();
-    m_properties.clear();
-    m_strings.clear();
-    m_stringMap.clear();
+    clearInfo();
 
     m_inRAM         = (char*)pData;
     m_inRAMSize     = dataSize;
@@ -128,11 +135,7 @@ Reader::open(istream& i, const char *name, unsigned int ormode)
 {
     if ((m_in && m_in != &i) || m_gzfile) close();
 
-    m_objects.clear();
-    m_components.clear();
-    m_properties.clear();
-    m_strings.clear();
-    m_stringMap.clear();
+    clearInfo();
 
     m_in            = &i;
     m_needsClosing  = false;
@@ -163,11 +166,7 @@ Reader::open(const char *filename)
     //if (m_in) return false;
     if (m_in || m_gzfile) close();
     
-    m_objects.clear();
-    m_components.clear();
-    m_properties.clear();
-    m_strings.clear();
-    m_stringMap.clear();
+    clearInfo();
     
     struct stat buf;
     if (stat( filename, &buf ) )
@@ -273,11 +272,7 @@ Reader::close()
     //  class is used for another file.
     //
 
-    //m_objects.clear();
-    //m_components.clear();
-    //m_properties.clear();
-    //m_strings.clear();
-    //m_stringMap.clear();
+    //clearInfo();
     m_buffer.clear();
 
     m_error        = false;
@@ -290,14 +285,49 @@ Reader::close()
     memset(&m_header, 0, sizeof(m_header));
 }
 
-void Reader::header(const Header&) {}
-Reader::Request Reader::object(const string&, const string&, unsigned int,
-                    const ObjectInfo &) { return Request(true); }
-Reader::Request Reader::component(const string&, const ComponentInfo &) { return Request(true); }
-Reader::Request Reader::property(const string&, const PropertyInfo &) { return Request(true); }
-void* Reader::data(const PropertyInfo&, size_t) { return 0; }
-void Reader::dataRead(const PropertyInfo&) {}
-void Reader::descriptionComplete() {}
+void
+Reader::header(const Header&)
+{
+}
+
+Reader::Request
+Reader::object( const string&,
+                const string&,
+                unsigned int,
+                const ObjectInfo &)
+{
+    return Request(true);
+}
+
+Reader::Request
+Reader::component( const string&,
+                   const ComponentInfo &)
+{
+    return Request(true);
+}
+
+Reader::Request
+Reader::property( const string&,
+                  const PropertyInfo &)
+{
+    return Request(true); 
+}
+
+void*
+Reader::data(const PropertyInfo&, size_t)
+{
+    return 0;
+}
+
+void
+Reader::dataRead(const PropertyInfo&)
+{
+}
+
+void
+Reader::descriptionComplete()
+{
+}
 
 Reader::Request 
 Reader::component(const string& name, 
@@ -405,7 +435,6 @@ Reader::readObjects()
         o.objectData = 0;
         o.coffset = 0;
         o.requested = false;
-        o.queried = false;
 
         if (m_header.version == 2)
         {
@@ -437,7 +466,6 @@ Reader::readObjects()
                                 stringFromId(o.protocolName), 
                                 o.protocolVersion,
                                 o);
-            o.queried = true;
             o.requested  = r.m_want;
             o.objectData = r.m_data;
         }
@@ -465,7 +493,6 @@ Reader::readComponents()
             c.object = 0;
             c.poffset = 0;
             c.requested = false;
-            c.queried = false;
             
             if (m_header.version == 2)
             {
@@ -495,7 +522,6 @@ Reader::readComponents()
                 Request r = component(stringFromId(c.name), 
                                       stringFromId(c.interpretation),
                                       c);
-                c.queried = true;
                 c.requested = r.m_want;
                 c.componentData = r.m_data;
             }
@@ -527,7 +553,6 @@ Reader::readProperties()
             p.component = 0;
             p.requested = false;
             p.index = index++;
-            p.queried = false;
             
             if (m_header.version == 2)
             {
@@ -558,7 +583,6 @@ Reader::readProperties()
                 Request r = property(stringFromId(p.name), 
                                      stringFromId(p.interpretation),
                                      p);
-                p.queried = true;
                 p.requested = r.m_want;
                 p.propertyData = r.m_data;
             }
@@ -695,8 +719,6 @@ Reader::findObjects(const std::string &pattern, std::vector<std::string> &names)
         while (oit != m_objects.end())
         {
             std::string oname = stringFromId(oit->name);
-            //int len = int(oname.length());
-            //if (re_search(&e, oname.c_str(), len, 0, len, NULL) >= 0)
             if (regexec(&e, oname.c_str(), 0, 0, 0) == 0)
             {
                 names.push_back(oname);
@@ -723,8 +745,6 @@ Reader::findComponents(const ObjectInfo &o, const std::string &pattern, std::vec
         while (cit != m_components.end())
         {
             std::string cname = stringFromId(cit->name);
-            //int len = int(cname.length());
-            //if (re_search(&e, cname.c_str(), len, 0, len, NULL) >= 0)
             if (regexec(&e, cname.c_str(), 0, 0, 0) == 0)
             {
                 names.push_back(cname);
@@ -766,8 +786,6 @@ Reader::findProperties(const ComponentInfo &c, const std::string &pattern, std::
         while (pit != m_properties.end())
         {
             std::string pname = stringFromId(pit->name);
-            //int len = int(pname.length());
-            //if (re_search(&e, pname.c_str(), len, 0, len, NULL) >= 0)
             if (regexec(&e, pname.c_str(), 0, 0, 0) == 0)
             {
                 names.push_back(pname);
@@ -811,20 +829,25 @@ Reader::findProperties(const std::string &o, const std::string &c, const std::st
 }
 
 bool
-Reader::accessProperty(PropertyInfo& p)
+Reader::queryProperty(PropertyInfo &p, bool queryUp)
 {
-    if (!p.queried)
+    if (!queryUp || (p.component && queryComponent(*((ComponentInfo*) p.component), true)))
     {
-        if (p.component && accessComponentOnly(*((ComponentInfo*) p.component)))
-        {
-            Request r = property(stringFromId(p.name), stringFromId(p.interpretation), p);
-            p.requested = r.m_want;
-            p.propertyData = r.m_data;
-        }
-        p.queried = true;
+        Request r = property(stringFromId(p.name), stringFromId(p.interpretation), p);
+        p.requested = r.m_want;
+        p.propertyData = r.m_data;
+        return p.requested;
     }
+    else
+    {
+        return false;
+    }
+}
 
-    if (p.requested)
+bool
+Reader::accessProperty(PropertyInfo &p, bool queryUp)
+{
+    if (queryProperty(p, queryUp))
     {
         seekTo(p);
         readProperty(p);
@@ -837,33 +860,39 @@ Reader::accessProperty(PropertyInfo& p)
 }
 
 bool
-Reader::accessComponentOnly(ComponentInfo &c)
+Reader::accessProperty(PropertyInfo& p)
 {
-    if (!c.queried)
-    {
-        if (c.object && accessObjectOnly(*((ObjectInfo*) c.object)))
-        {
-            const std::string &nme = stringFromId(c.name);
-            Request r = component(nme, c);
-            c.requested = r.m_want;
-            c.componentData = r.m_data;
-        }
-        c.queried = true;
-    }
-
-    return c.requested;
+    return accessProperty(p, true);
 }
 
 bool
-Reader::accessComponent(ComponentInfo& c)
+Reader::queryComponent(ComponentInfo &c, bool queryUp)
 {
-    if (accessComponentOnly(c))
+    if (!queryUp || (c.object && queryObject(*((ObjectInfo*) c.object))))
+    {
+        Request r = component(stringFromId(c.name), stringFromId(c.interpretation), c);
+        c.requested = r.m_want;
+        c.componentData = r.m_data;
+        return c.requested;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+bool
+Reader::accessComponent(ComponentInfo& c, bool queryUp)
+{
+    if (queryComponent(c, queryUp))
     {
         for (uint32 j=0; j < c.numProperties; j++)
         {
             PropertyInfo& p = m_properties[c.poffset + j];
-            bool success = accessProperty(p);
-            if (!success) return false;
+            if (!accessProperty(p, false))
+            {
+                return false;
+            }
         }
         return true;
     }
@@ -874,18 +903,21 @@ Reader::accessComponent(ComponentInfo& c)
 }
 
 bool
-Reader::accessObjectOnly(ObjectInfo &o)
+Reader::accessComponent(ComponentInfo& c)
 {
-    if (!o.queried)
-    {
-        Request r = object(stringFromId(o.name), 
-                           stringFromId(o.protocolName), 
-                           o.protocolVersion,
-                           o);
-        o.requested = r.m_want;
-        o.objectData = r.m_data;
-        o.queried = true;
-    }
+    return accessComponent(c, true);
+}
+
+bool
+Reader::queryObject(ObjectInfo &o)
+{
+    Request r = object(stringFromId(o.name), 
+                       stringFromId(o.protocolName), 
+                       o.protocolVersion,
+                       o);
+
+    o.requested = r.m_want;
+    o.objectData = r.m_data;
 
     return o.requested;
 }
@@ -893,15 +925,17 @@ Reader::accessObjectOnly(ObjectInfo &o)
 bool
 Reader::accessObject(ObjectInfo& o)
 {
-    if (accessObjectOnly(o))
+    if (queryObject(o))
     {
         for (uint32 q=0; q < o.numComponents; q++)
         {
             assert( (o.coffset+q) < m_components.size() );
 
             ComponentInfo& c = m_components[o.coffset + q];
-            bool success = accessComponent(c);
-            if (!success) return false;
+            if (!accessComponent(c, false))
+            {
+                return false;
+            }
         }
         return true;
     }

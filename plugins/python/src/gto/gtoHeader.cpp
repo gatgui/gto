@@ -369,7 +369,6 @@ static int PropertyInfo_init( PyObject *self, PyObject *, PyObject * )
     ppi->mWidth = PyInt_FromLong(0);
     ppi->mPad = PyInt_FromLong(0);
     ppi->mCompInfo = Py_None;
-    ppi->mIndex = PyInt_FromLong(0);
     ppi->mOffset = PyInt_FromLong(0);
     Py_INCREF(Py_None);
     ppi->mInfo = NULL;
@@ -387,7 +386,6 @@ static void PropertyInfo_dealloc(PyObject *self)
     Py_XDECREF(ppi->mWidth);
     Py_XDECREF(ppi->mPad);
     Py_XDECREF(ppi->mCompInfo);
-    Py_XDECREF(ppi->mIndex);
     Py_XDECREF(ppi->mOffset);
     ppi->mInfo = NULL;
     Py_TYPE(self)->tp_free(self);
@@ -450,13 +448,6 @@ static PyObject* PropertyInfo_getComponent(PyObject *self, void*)
     return ppi->mCompInfo;
 }
 
-static PyObject* PropertyInfo_getIndex(PyObject *self, void*)
-{
-    PyPropertyInfo *ppi = (PyPropertyInfo*) self;
-    Py_INCREF(ppi->mIndex);
-    return ppi->mIndex;
-}
-
 static PyObject* PropertyInfo_getOffset(PyObject *self, void*)
 {
     PyPropertyInfo *ppi = (PyPropertyInfo*) self;
@@ -473,7 +464,6 @@ static PyGetSetDef PropertyInfoGetSet[] =
     {(char*)"width", PropertyInfo_getWidth, NULL, NULL, NULL},
     {(char*)"type", PropertyInfo_getType, NULL, NULL, NULL},
     {(char*)"component", PropertyInfo_getComponent, NULL, NULL, NULL},
-    {(char*)"index", PropertyInfo_getIndex, NULL, NULL, NULL},
     {(char*)"offset", PropertyInfo_getOffset, NULL, NULL, NULL},
     {NULL, NULL, NULL, NULL, NULL}
 };
@@ -532,9 +522,6 @@ PyObject *newPropertyInfo( Gto::Reader *reader,
 
     Py_DECREF(ppi->mOffset);
     ppi->mOffset = PyInt_FromLong( pi.offset );
-
-    Py_DECREF(ppi->mIndex);
-    ppi->mIndex = PyInt_FromLong( pi.propertyIndex() );
     
     Py_DECREF(ppi->mCompInfo);
     ppi->mCompInfo = newComponentInfo( reader, (*pi.component) );
