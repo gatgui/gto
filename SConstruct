@@ -108,7 +108,7 @@ targets = [
      "libdirs": oth_libdirs,
      "srcs": glob.glob("plugins/python/src/gto/*.cpp"),
      "libs": ["gtoLib"] + oth_libs,
-     "custom": [excons.tools.python.Require],
+     "custom": [excons.tools.python.SoftRequire],
      "install": {pythonPrefix: ["python/gto/gto.py", "python/gtoContainer/gtoContainer.py"]}
     },
     {"name": "gtoinfo",
