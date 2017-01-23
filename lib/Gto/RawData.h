@@ -163,7 +163,8 @@ public:
     virtual ~RawDataBaseReader();
 
     virtual bool        open(const char *filename);
-    virtual bool        open(std::istream&, const char *name);
+    virtual bool        open(std::istream&, const char *name,
+                             unsigned int ormode = 0);
 
     RawDataBase*        dataBase() { return m_dataBase; }
 

@@ -119,6 +119,7 @@ Writer::open(const char* filename, FileType type, bool writeIndex)
     m_outName         = filename;
     m_type            = type;
     m_writeIndexTable = writeIndex;
+    m_gzRawFd         = -1;
 
 #ifndef GTO_SUPPORT_ZIP
     if (type == CompressedGTO) type = BinaryGTO;

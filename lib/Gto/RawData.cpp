@@ -153,9 +153,9 @@ RawDataBaseReader::open(const char *filename)
 }
 
 bool
-RawDataBaseReader::open(std::istream& in, const char *name)
+RawDataBaseReader::open(std::istream& in, const char *name, unsigned int ormode)
 {
-    if (Reader::open(in, name))
+    if (Reader::open(in, name, ormode))
     {
         m_dataBase->strings = stringTable();
         return true;

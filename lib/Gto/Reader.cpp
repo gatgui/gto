@@ -742,7 +742,7 @@ Reader::findComponents(const ObjectInfo &o, const std::string &pattern, std::vec
     {
         Components::const_iterator cit = m_components.begin() + o.coffset;
         Components::const_iterator eit = cit + o.numComponents;
-        while (cit != m_components.end())
+        while (cit != eit) // m_components.end())
         {
             std::string cname = stringFromId(cit->name);
             if (regexec(&e, cname.c_str(), 0, 0, 0) == 0)
@@ -783,7 +783,7 @@ Reader::findProperties(const ComponentInfo &c, const std::string &pattern, std::
     {
         Properties::const_iterator pit = m_properties.begin() + c.poffset;
         Properties::const_iterator eit = pit + c.numProperties;
-        while (pit != m_properties.end())
+        while (pit != eit) // m_properties.end())
         {
             std::string pname = stringFromId(pit->name);
             if (regexec(&e, pname.c_str(), 0, 0, 0) == 0)

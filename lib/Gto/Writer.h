@@ -259,7 +259,7 @@ private:
     bool            m_objectActive      : 1;
     bool            m_componentActive   : 1;
     bool            m_writeIndexTable   : 1;
-    size_t          m_bytesWritten;
+    // size_t          m_bytesWritten;
     DataOffsets     m_dataOffsets;
 };
 
@@ -296,7 +296,7 @@ void Writer::propertyDataInContainer(const T &container,
                                      int width)
 {
     typedef typename T::value_type value_type;
-    typedef typename T::const_iterator iterator;
+    // typedef typename T::const_iterator iterator;
 
     std::vector<value_type> data(container.size());
     std::copy(container.begin(), container.end(), data.begin());
