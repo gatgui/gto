@@ -234,18 +234,18 @@ Reader::outputStringTable()
 }
 
 Reader::Request
-Reader::object(const std::string &name,
-               const std::string &protocol,
-               unsigned int version,
-               const Gto::Reader::ObjectInfo &info)
+Reader::object(const std::string & /* name */,
+               const std::string & /* protocol */,
+               unsigned int /* version */,
+               const Gto::Reader::ObjectInfo & /* info */)
 {
     return Request(outputData);
 }
 
 Reader::Request
-Reader::component(const std::string &n,
-                  const std::string &i,
-                  const Gto::Reader::ComponentInfo& c)
+Reader::component(const std::string & /* n */,
+                  const std::string & /* i */,
+                  const Gto::Reader::ComponentInfo& /* c */)
 {
     return Request(outputData);
 }
@@ -657,7 +657,7 @@ void Reader::data(const PropertyInfo& info,
     cout << (formatData ? "" : " ") << "]" << endl;
 }
 
-void Reader::data(const PropertyInfo& info, bool)
+void Reader::data(const PropertyInfo& /* info */, bool)
 {
     if (!outputData) return;
 }
