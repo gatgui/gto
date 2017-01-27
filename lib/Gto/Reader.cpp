@@ -1160,7 +1160,7 @@ Reader::read(char *buffer, size_t size)
         size_t remaining = size;
         while (remaining != 0)
         {
-            int retval = gzread( (gzFile)m_gzfile, buffer_pos, remaining );
+            int retval = gzread( (gzFile)m_gzfile, buffer_pos, (unsigned)remaining );
             if (retval <= 0)
             {
                 int zError = 0;
@@ -1253,7 +1253,7 @@ void Reader::seekForward(size_t bytes)
 #ifdef GTO_SUPPORT_ZIP
     else
     {
-        gzseek( (gzFile)m_gzfile, bytes, SEEK_CUR );
+        gzseek( (gzFile)m_gzfile, (unsigned)bytes, SEEK_CUR );
     }
 #endif
 }

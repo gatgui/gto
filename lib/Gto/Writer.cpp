@@ -660,7 +660,7 @@ Writer::writeText(const std::string& s)
 #ifdef GTO_SUPPORT_ZIP
     else if (m_gzfile)
     {
-        gzwrite( (gzFile)m_gzfile, (void*)s.c_str(), s.size() );
+        gzwrite( (gzFile)m_gzfile, (void*)s.c_str(), (unsigned)s.size() );
     }
 #endif
 }
@@ -690,7 +690,7 @@ Writer::write(const void* p, size_t s)
 #ifdef GTO_SUPPORT_ZIP
     else if (m_gzfile)
     {
-        gzwrite( (gzFile)m_gzfile, (void*)p, s );
+        gzwrite( (gzFile)m_gzfile, (void*)p, (unsigned)s );
     }
 #endif
 }
@@ -706,7 +706,7 @@ Writer::write(const std::string& s)
 #ifdef GTO_SUPPORT_ZIP
     else if (m_gzfile)
     {
-        gzwrite( (gzFile)m_gzfile, (void*)s.c_str(), s.size() + 1 );
+        gzwrite( (gzFile)m_gzfile, (void*)s.c_str(), (unsigned)s.size() + 1 );
     }
 #endif
 }
@@ -969,7 +969,7 @@ Writer::writeIndexTable()
 #else
     unsigned int indexTableOffset = lseek(m_gzRawFd, 0, SEEK_CUR);
 #endif
-    unsigned int indexTableSize = m_dataOffsets.size();
+    unsigned int indexTableSize = (unsigned)m_dataOffsets.size();
 
     //
     // Always store offsets as little-endian
@@ -985,7 +985,7 @@ Writer::writeIndexTable()
     //
     // Write the index table into the gzip stream
     //
-    /*int w =*/ gzwrite( (gzFile)m_gzfile, &m_dataOffsets.front(), m_dataOffsets.size() * sizeof(unsigned int) );
+    /*int w =*/ gzwrite( (gzFile)m_gzfile, &m_dataOffsets.front(), (unsigned)(m_dataOffsets.size() * sizeof(unsigned int)) );
 
     //
     // Close the gzip file.  Must be done before lseeking back
