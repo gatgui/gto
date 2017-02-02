@@ -9,6 +9,7 @@ import excons.tools.zlib
 python_prefix = excons.tools.python.ModulePrefix() + "/" + excons.tools.python.Version()
 
 lib_defs = []
+lib_cppflags = ""
 lib_incdirs = ["lib"]
 lib_extrasrcs = []
 
@@ -20,20 +21,29 @@ env = excons.MakeBaseEnv()
 if sys.platform == "win32":
     lib_defs.append("REGEX_STATIC")
     lib_defs.append("_SCL_SECURE_NO_WARNINGS")
+    lib_defs.append("_CRT_SECURE_NO_WARNINGS")
     lib_incdirs.append("regex/src")
     lib_extrasrcs = ["regex/src/regex.c"]
+    # Shutup a bunch of annoying warnings
+    if excons.warnl != "all":
+        lib_cppflags += " -wd4267 -wd4244 -wd4018 -wd4065 -wd4251"
 
 if excons.GetArgument("use-zlib", 0, int) != 0:
     lib_defs.append("GTO_SUPPORT_ZIP")
     cmn_custom.append(excons.tools.zlib.Require)
     if sys.platform == "win32":
-        import zipfile
-        zf = zipfile.ZipFile("zlib-1.2.3.zip")
-        zf.extractall()
-        zlib_dir = os.path.abspath("zlib-1.2.3")
-        excons.SetArgument("with-zlib-inc=%s/include" % zlib_dir)
-        excons.SetArgument("with-zlib-lib=%s/lib/%s" % (zlib_dir, excons.arch_dir))
-        excons.SetArgument("zlib-static", 1)
+        zlib_inc, zlib_lib = excons.GetDirs("zlib", silent=True)
+        if zlib_inc is None and zlib_lib is None:
+            zlib_dir = os.path.abspath("zlib-1.2.3")
+            if not os.path.isdir(zlib_dir):
+                print("Extracting 'zlib-1.2.3.zip' to 'zlib-1.2.3'...")
+                import zipfile
+                zf = zipfile.ZipFile("zlib-1.2.3.zip")
+                zf.extractall()
+            print("Use self-provided zlib (1.2.3)")
+            excons.SetArgument("with-zlib-inc", "%s/include" % zlib_dir)
+            excons.SetArgument("with-zlib-lib", "%s/lib/%s" % (zlib_dir, excons.arch_dir))
+            excons.SetArgument("zlib-static", 1)
 
 gto_headers = env.Install(excons.OutputBaseDirectory() + "/include/Gto", glob.glob("lib/Gto/*.h"))
 
@@ -44,8 +54,10 @@ prjs = [
         "type": "staticlib",
         "desc": "GTO static library",
         "defs": lib_defs + ["GTO_STATIC"],
+        "cppflags": lib_cppflags,
         "incdirs": lib_incdirs,
-        "srcs": glob.glob("lib/Gto/*.cpp") + lib_extrasrcs
+        "srcs": glob.glob("lib/Gto/*.cpp") + lib_extrasrcs,
+        "custom": cmn_custom
     },
     {
         "name": "gtoLib",
@@ -53,6 +65,7 @@ prjs = [
         "type": "sharedlib",
         "desc": "GTO shared library",
         "defs": lib_defs + ["GTO_EXPORT"],
+        "cppflags": lib_cppflags,
         "incdirs": lib_incdirs,
         "srcs": glob.glob("lib/Gto/*.cpp") + lib_extrasrcs,
         "custom": cmn_custom
@@ -98,7 +111,7 @@ def RequireGto(static=False):
    def _RealRequire(env):
       env.Append(LIBS=["gtoLib%s" % ("_s" if static else "")])
       if static:
-         env.Append(CPPDFINES=["GTO_STATIC"])
+         env.Append(CPPDEFINES=["GTO_STATIC"])
          if excons.GetArgument("use-zlib", 0, int) != 0:
             excons.tools.zlib.Require(env)
       excons.AddHelpOptions(gto=build_opts)
