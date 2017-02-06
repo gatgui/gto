@@ -972,7 +972,7 @@ Reader::readBinaryGTO()
     readProperties();       if (m_error) return false;
     descriptionComplete();
 
-    if (m_mode & (HeaderOnly | RandomAccess))
+    if (m_mode & HeaderOnly)
     {
         return true;
     }
@@ -997,6 +997,8 @@ Reader::readBinaryGTO()
         {
             for (Properties::iterator e = p + comp.numProperties; p != e; ++p)
             {
+                // Will actually reqd requested property data when not in RandomAccess mode
+                // Otherwise, just store file data offsets for delayed read
                 if (!readProperty(*p))
                 {
                     return false;
