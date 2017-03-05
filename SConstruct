@@ -28,7 +28,7 @@ if sys.platform == "win32":
     if excons.warnl != "all":
         lib_cppflags += " -wd4267 -wd4244 -wd4018 -wd4065 -wd4251"
 
-if excons.GetArgument("use-zlib", 0, int) != 0:
+if excons.GetArgument("gto-use-zlib", 0, int) != 0:
     lib_defs.append("GTO_SUPPORT_ZIP")
     cmn_custom.append(excons.tools.zlib.Require)
     if sys.platform == "win32":
@@ -97,7 +97,7 @@ prjs = [
     }
 ]
 
-build_opts = "GTO OPTIONS\n  use-zlib=0|1 : Enable zlib compression. [0]"
+build_opts = "GTO OPTIONS\n  gto-use-zlib=0|1 : Enable zlib compression. [0]"
 excons.AddHelpOptions(gto=build_opts)
 if sys.platform != "win32":
     excons.AddHelpOptions(zlib=excons.tools.zlib.GetOptionsString())
@@ -112,7 +112,7 @@ def RequireGto(static=False):
       env.Append(LIBS=["gtoLib%s" % ("_s" if static else "")])
       if static:
          env.Append(CPPDEFINES=["GTO_STATIC"])
-         if excons.GetArgument("use-zlib", 0, int) != 0:
+         if excons.GetArgument("gto-use-zlib", 0, int) != 0:
             excons.tools.zlib.Require(env)
       excons.AddHelpOptions(gto=build_opts)
 
