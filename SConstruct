@@ -4,6 +4,7 @@ import glob
 import excons
 import excons.tools.python
 import excons.tools.zlib
+import excons.tools.houdini
 
 
 python_prefix = excons.tools.python.ModulePrefix() + "/" + excons.tools.python.Version()
@@ -94,6 +95,31 @@ prjs = [
         "srcs": ["bin/gtoinfo/main.cpp"],
         "libs": ["gtoLib_s"],
         "custom": cmn_custom
+    },
+    {
+        "name": "SOP_GtoImport",
+        "alias": "houdini",
+        "type": "dynamicmodule",
+        "prefix": "houdini/%s" % excons.tools.houdini.Version(),
+        "ext": excons.tools.houdini.PluginExt(),
+        "defs": ["GTO_STATIC"],
+        "incdirs": lib_incdirs + ["plugins/houdini/sop"],
+        "srcs": glob.glob("plugins/houdini/sop/*.cpp"),
+        "libs": ["gtoLib_s"],
+        "custom": [excons.tools.houdini.Require, excons.tools.houdini.Plugin] + cmn_custom
+    },
+    {
+        "name": "ROP_GtoExport",
+        "alias": "houdini",
+        "type": "dynamicmodule",
+        "prefix": "houdini/%s" % excons.tools.houdini.Version(),
+        "ext": excons.tools.houdini.PluginExt(),
+        "defs": ["GTO_STATIC"],
+        "incdirs": lib_incdirs + ["plugins/houdini/rop"],
+        "srcs": glob.glob("plugins/houdini/rop/*.cpp"),
+        "libs": ["gtoLib_s"],
+        "custom": [excons.tools.houdini.Require, excons.tools.houdini.Plugin] + cmn_custom,
+        "install": {"houdini/otls/%s" % excons.tools.houdini.Version(full=False): glob.glob("plugins/houdini/rop/*.otl")}
     }
 ]
 

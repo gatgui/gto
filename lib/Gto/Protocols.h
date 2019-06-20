@@ -39,6 +39,7 @@
 #define GTO_PROTOCOL_OBJECT              "object"
 #define GTO_PROTOCOL_POLYGON             "polygon"
 #define GTO_PROTOCOL_NURBS               "NURBS"
+#define GTO_PROTOCOL_NURBS_CURVE         "NURBSCurve"
 #define GTO_PROTOCOL_CATMULL_CLARK       "catmull-clark"     // sub-d
 #define GTO_PROTOCOL_LOOP                "loop"              // sub-d
 #define GTO_PROTOCOL_TRANSFORM           "transform"
@@ -62,10 +63,22 @@
 #define GTO_COMPONENT_MAPPINGS           "mappings"
 #define GTO_COMPONENT_SMOOTHING          "smoothing"
 #define GTO_COMPONENT_NORMALS            "normals"
+#define GTO_COMPONENT_TANGENTS           "tangents"
+#define GTO_COMPONENT_BINORMALS          "binormals"
+#define GTO_COMPONENT_COLOURS            "colours"
+#define GTO_COMPONENT_CREASES            "creases"
 #define GTO_COMPONENT_SHELLS             "shells"
 #define GTO_COMPONENT_IMAGE              "image"
 #define GTO_COMPONENT_STRAND             "strand"
 #define GTO_COMPONENT_CHANNELS           "channels"
+#define GTO_COMPONENT_CAMERA             "camera"
+#define GTO_COMPONENT_FRUSTUM            "frustum"
+#define GTO_COMPONENT_FLAGS              "flags"
+#define GTO_COMPONENT_PARTICLE           "particle"
+#define GTO_COMPONENT_OBJECT_ATTRIBS     "object_attributes"
+#define GTO_COMPONENT_PRIMITIVE_ATTRIBS  "primitive_attributes"
+#define GTO_COMPONENT_POINT_ATTRIBS      "point_attributes"
+#define GTO_COMPONENT_VERTEX_ATTRIBS     "vertex_attributes"
 
 #define GTO_PROPERTY_POSITION            "position"          // float[3][]
 #define GTO_PROPERTY_VELOCITY            "velocity"          // float[3][]
@@ -82,12 +95,16 @@
 #define GTO_PROPERTY_PROTOCOL            "protocol"          // string[1][]
 #define GTO_PROPERTY_PROTOCOL_VERSION    "protocolVersion"   // string[1][]
 #define GTO_PROPERTY_GLOBAL_MATRIX       "globalMatrix"      // float[16][1]
+#define GTO_PROPERTY_LOCAL_MATRIX        "localMatrix"       // float[16][1]
 #define GTO_PROPERTY_BOUNDINGBOX         "boundingBox"       // float[6][1]
 #define GTO_PROPERTY_PARENT              "parent"            // string[1][1]
 #define GTO_PROPERTY_TYPE                "type"              // byte[1][]
 #define GTO_PROPERTY_SIZE                "size"              // multiple
 #define GTO_PROPERTY_VERTEX              "vertex"            // int[1][]
 #define GTO_PROPERTY_NORMAL              "normal"            // multiple
+#define GTO_PROPERTY_TANGENT             "tangent"           // multiple
+#define GTO_PROPERTY_BINORMAL            "binormal"          // multiple
+#define GTO_PROPERTY_COLOUR              "colour"            // multiple
 #define GTO_PROPERTY_ST                  "st"                // multiple
 #define GTO_PROPERTY_STROOT              "stRoot"            // multiple
 #define GTO_PROPERTY_METHOD              "method"            // int[1][1]
@@ -96,6 +113,22 @@
 #define GTO_PROPERTY_PIXELS              "pixels"
 #define GTO_PROPERTY_WIDTH               "width"
 #define GTO_PROPERTY_INTERP_BOUNDARY     "interpolateBoundary" // byte[1][1]
+#define GTO_PROPERTY_EDGE_CREASE         "edgeCrease"          // multiple: int[2][] or float[1][]
+#define GTO_PROPERTY_VERTEX_CREASE       "vertexCrease"        // multiple: int[1][] or float[1][]
+#define GTO_PROPERTY_MATERIAL_ID         "materialID"
+#define GTO_PROPERTY_VISIBILITY          "visibility"
+#define GTO_PROPERTY_UV_SET              "GTOUVSet_"
+#define GTO_PROPERTY_COLOUR_SET          "GTOColourSet_"
+#define GTO_PROPERTY_SHUTTER             "shutter"         // float[1][1]
+#define GTO_PROPERTY_BACKGROUND          "background"      // float[3][1]
+#define GTO_PROPERTY_LEFT                "left"            // float[1][1]
+#define GTO_PROPERTY_RIGHT               "right"           // float[1][1]
+#define GTO_PROPERTY_BOTTOM              "bottom"          // float[1][1]
+#define GTO_PROPERTY_TOP                 "top"             // float[1][1]
+#define GTO_PROPERTY_NEAR                "near"            // float[1][1]
+#define GTO_PROPERTY_FAR                 "far"             // float[1][1]
+#define GTO_PROPERTY_ORTHO               "ortho"           // float[1][1]
+#define GTO_PROPERTY_HARDEDGE            "hardEdge"        // int[1][1]
 
 #define GTO_POLYGON_POLYGON              0
 #define GTO_POLYGON_TRIANGLE             1
@@ -109,6 +142,9 @@
 #define GTO_SMOOTHING_METHOD_FACETED        2
 #define GTO_SMOOTHING_METHOD_PARTITIONED    3
 #define GTO_SMOOTHING_METHOD_DISCONTINUOUS  4
+
+#define GTO_NURBS_CURVE_NON_PERIODIC     0
+#define GTO_NURBS_CURVE_PERIODIC         3 // matches Maya's Form attribute, works fine in if's
 
 #define GTO_INTERPRET_COORDINATE   "coordinate"
 #define GTO_INTERPRET_NORMAL       "normal"
